@@ -56,9 +56,15 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 
 ## Roadmap
 
-- [ ] Creer la structure du projet
-- [ ] server/client en c++
-	- [ ] utiliser poll ou equivalent
+- [x] Creer la structure du projet
+- [ ] server en c++
+	- [x] envoyer message
+	- [x] recevoir message
+	- [x] passer en mode non bloquant
+	- [x] utiliser poll ou equivalent
+	- [ ] close les clients qui se deconnecte
+	- [ ] alloue notre tableau
+	- [ ] realloue notre tableau si le nombre de client max est atteind
 - [ ] parsing des requetes clients
 	- [ ] analyse messages requetes
 - [ ] creation des reponses du serveur
@@ -67,3 +73,9 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [ ] adapter les status de reponse
 	- [ ] envoyer au client
 - [ ] gerer les methodes POST et DELETE en plus de GET
+
+## Doc
+
+- [socket](https://www.youtube.com/watch?v=s3o5tixMFho)
+- [select/poll/epoll](https://www.youtube.com/watch?v=dEHZb9JsmOU)
+- [webserv](https://webserv42.notion.site/webserv42/Webserv-cbb6ab4136ba4b4c8cb4f98109d5fc1f)

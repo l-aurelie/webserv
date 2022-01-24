@@ -4,10 +4,11 @@ O			=	obj/
 D			=	dep/
 
 NAME		=	webserv
-SRC			=	$Smain.cpp
+SRC			=	main.cpp \
+				Server.cpp
 
-OBJ			=	$(SRC:$S%.cpp=$O%.o)
-DEP			=	$(SRC:$S%.cpp=$D%.d)
+OBJ			=	$(SRC:%.cpp=$O%.o)
+DEP			=	$(SRC:%.cpp=$D%.d)
 
 CXX			=	c++
 
@@ -15,6 +16,7 @@ CXXFLAGS	+=	-I$I
 CXXFLAGS	+=	-Wall -Wextra -Werror -std=c++98 -pedantic-errors
 CXXFLAGS	+=	-g3 -fsanitize=address
 
+LDFLAGS		+=	-Wall -Wextra -Werror -std=c++98 -pedantic-errors
 LDFLAGS		+=	-g3 -fsanitize=address
 
 RM			=	/bin/rm -f

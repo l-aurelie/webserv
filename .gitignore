@@ -32,3 +32,7 @@ obj/
 *.exe
 *.out
 *.app
+webserv
+
+src/man_poll.c
+Struct_pseudo_code
