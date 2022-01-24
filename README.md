@@ -11,7 +11,7 @@ Le client (ex : navigateur web) demande une ressource(requete); Le serveur repon
 
 Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, epoll (epoll_create, epoll_ctl, epoll_wait), kqueue (kqueue, kevent), socket, accept, listen, send, recv, bind, connect, inet_addr, setsockopt, getsockname, fcntl.
 
-## Roadmap
+## Subject
 
 - [ ] Web server
 	- [ ] Listen for client
@@ -51,6 +51,18 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 			- [ ] call the cgi with the file requested as first arg
 			- [ ] run in correct directory for relative path
 
-
-
 - [ ] Leaks
+
+## Roadmap
+
+- [ ] Creer la structure du projet
+- [ ] server/client en c++
+	- [ ] utiliser poll ou equivalent
+- [ ] parsing des requetes clients
+	- [ ] analyse messages requetes
+- [ ] creation des reponses du serveur
+	- [ ] header
+	- [ ] body => aller chercher le fichier correspondant
+	- [ ] adapter les status de reponse
+	- [ ] envoyer au client
+- [ ] gerer les methodes POST et DELETE en plus de GET
