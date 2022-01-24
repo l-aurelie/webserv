@@ -15,6 +15,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 
 - [ ] Web server
 	- [ ] Listen for client
+	- [ ] Listen for clients
 	- [ ] Non blocking
 	- [ ] Use poll or equivalent to control IO between client and server
 	- [ ] Use only 1 poll or equivalent
@@ -22,7 +23,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [ ] Default error pages
 	- [ ] Serve fully static website
 	- [ ] Let client upload files
-	- [ ] Accurate response status
+	- [ ] Accurate response status [doc](https://developer.mozilla.org/fr/docs/Web/HTTP/Status)
 	- [ ] Method GET
 	- [ ] Method POST
 	- [ ] Method DELETE
