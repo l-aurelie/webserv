@@ -36,13 +36,13 @@ int Server::getSocket(void) const {
 	return this->socketServer;
 }
 
-int Server::initServ(void) {
+int Server::initServ(int port) {
 
 
 	struct sockaddr_in addrServer;
 	addrServer.sin_addr.s_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
-	addrServer.sin_port = htons(30000);
+	addrServer.sin_port = htons(port);
 
 	if (bind(this->socketServer, (const struct sockaddr *)&addrServer, sizeof(addrServer)) == -1)
 	{

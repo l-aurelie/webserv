@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <map>
 
 class Server
 {
@@ -9,7 +10,7 @@ class Server
 		Server(Server const& rhs);
 		~Server();
 
-		int initServ();
+		int initServ(int port);
 		int getSocket() const;
 		void launch();
 
