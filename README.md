@@ -63,8 +63,9 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] passer en mode non bloquant
 	- [x] utiliser poll ou equivalent
 	- [x] close les clients qui se deconnecte
-	- [ ] alloue notre tableau
-	- [ ] realloue notre tableau si le nombre de client max est atteind
+	- [x] alloue notre tableau
+	- [x] realloue notre tableau si le nombre de client max est atteind
+	- [ ] repondre aux messages des clients
 - [ ] parsing des requetes clients
 	- [ ] analyse messages requetes
 - [ ] creation des reponses du serveur
