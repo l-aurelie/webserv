@@ -2,13 +2,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <sys/socket.h>
-#include <string>
-#include <unistd.h>
-#include "Server.hpp"
+#include <map>
 #include <poll.h>
+#include <string>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <vector>
-
+#include "Server.hpp"
+#include "webserv.hpp"
 
 //struct pollfd *enlarge(struct pollfds *fds)
 //{
@@ -46,6 +47,7 @@ int main(void) {
 	int	socketClient;
 	struct pollfd pfd;
 	std::vector<struct pollfd> fds;
+	std::map<int, std::string> msg_to_client;
 	pfd.fd = socketServer;
 	pfd.events = POLLIN;
 	char buf[19 + 1];
@@ -61,29 +63,46 @@ int main(void) {
 				socketClient = accept(socketServer, (struct sockaddr *)&addrClient, &csize);
 				std::cout << "New client " << socketClient << " arrived" << std::endl;
 				pfd.fd = socketClient;
-				pfd.events = POLLIN | POLLRDHUP | POLLERR;
+				pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR;
 				fds.push_back(pfd);
 				continue ;
 			}
 
 			for (std::vector<struct pollfd>::iterator it = fds.begin()++; it != fds.end(); it++)
 			{
-				if (it->revents == POLLIN)
+				if (it->revents & POLLIN)
+					std::cout << "revents = POLLIN" << std::endl;
+				if (it->revents == POLLOUT && msg_to_client.count(it->fd))
+					std::cout << "revents = POLLOUT" << std::endl;
+				if (it->revents & POLLERR)
+					std::cout << "revents = POLLERR" << std::endl;
+				if (it->revents & POLLRDHUP)
+					std::cout << "revents = POLLRDHUP" << std::endl;
+
+				if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
 				{
 					bzero(buf, 20);	// TODO: remove forbidden func
+					std::cout << "waiting for recv" << std::endl;
 					if (recv(it->fd, buf, std::string(buf).length() - 1, 0) <= 0)
 						std::cerr << "error recv" << std::endl;
 					std::cout << "Client " << it->fd << " says: " << buf;
+					msg_to_client[it->fd] = "hell \n";
 				}
-				else if (it->revents)
+				else if (it->revents == POLLOUT && msg_to_client.count(it->fd)) {
+					std::cout << "waiting for send" << std::endl;
+					if (send(it->fd, msg_to_client[it->fd].c_str(), msg_to_client[it->fd].length(), 0) <= 0)
+						std::cerr << "send error \n";
+					msg_to_client.erase(it->fd);
+				}
+				else if (it->revents & POLLERR || it->revents & POLLRDHUP)
 				{
+					std::cout << "erreur revents = " << it->revents << std::endl;
 					std::cout << "client " << it->fd << " connection closed" << std::endl;
+					msg_to_client.erase(it->fd);
 					close(it->fd);
 					fds.erase(it);
 					break ;
 				}
-				//if ((fds[0].revents | POLLOUT) == POLLOUT)
-				//	send();
 			}
 		}
 	}
