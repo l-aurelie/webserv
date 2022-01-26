@@ -5,6 +5,8 @@ D			=	dep/
 
 NAME		=	webserv
 SRC			=	main.cpp \
+				Conf.cpp \
+				Parser.cpp \
 				Server.cpp
 
 OBJ			=	$(SRC:%.cpp=$O%.o)

@@ -11,15 +11,52 @@ Le client (ex : navigateur web) demande une ressource(requete); Le serveur repon
 
 Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, epoll (epoll_create, epoll_ctl, epoll_wait), kqueue (kqueue, kevent), socket, accept, listen, send, recv, bind, connect, inet_addr, setsockopt, getsockname, fcntl.
 
+## Roadmap
+
+- [x] Creer la structure du projet
+- [ ] server en c++
+	- [x] envoyer message
+	- [x] recevoir message
+	- [x] passer en mode non bloquant
+	- [x] utiliser poll ou equivalent
+	- [x] close les clients qui se deconnecte
+	- [x] alloue notre tableau
+	- [x] realloue notre tableau si le nombre de client max est atteind
+	- [x] repondre aux messages des clients
+	- [ ] utiliser les fichiers de conf
+- [ ] Parsing des fichiers de conf
+	- [x] Prendre chemin en argument
+	- [x] Chemin par defaut
+	- [x] Recuperer le port
+	- [ ] Serveur utilise le port du fichier de conf
+	- [ ] gerer le mot clef default_server dans la directive listen
+	- [x] Recuperer le host
+	- [ ] Serveur utilise le host du fichier de conf
+	- [x] Decouper le fichier de configuration dans des objets Conf
+- [ ] parsing des requetes clients
+	- [ ] analyse messages requetes
+- [ ] creation des reponses du serveur
+	- [ ] header
+	- [ ] body => aller chercher le fichier correspondant
+	- [ ] adapter les status de reponse
+	- [ ] envoyer au client
+- [ ] gerer les methodes POST et DELETE en plus de GET
+
+## Doc
+
+- [socket](https://www.youtube.com/watch?v=s3o5tixMFho)
+- [select/poll/epoll](https://www.youtube.com/watch?v=dEHZb9JsmOU)
+- [webserv](https://webserv42.notion.site/webserv42/Webserv-cbb6ab4136ba4b4c8cb4f98109d5fc1f)
+
 ## Subject
 
 - [ ] Web server
-	- [ ] Listen for client
-	- [ ] Listen for clients
-	- [ ] Non blocking
-	- [ ] Use poll or equivalent to control IO between client and server
-	- [ ] Use only 1 poll or equivalent
-	- [ ] Request must never hang forever
+	- [x] Listen for client
+	- [x] Listen for clients
+	- [x] Non blocking
+	- [x] Use poll or equivalent to control IO between client and server
+	- [x] Use only 1 poll or equivalent
+	- [x] Request must never hang forever
 	- [ ] Default error pages
 	- [ ] Serve fully static website
 	- [ ] Let client upload files
@@ -52,39 +89,5 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 			- [ ] call the cgi with the file requested as first arg
 			- [ ] run in correct directory for relative path
 
+- [ ] Error messages
 - [ ] Leaks
-
-## Roadmap
-
-- [x] Creer la structure du projet
-- [ ] server en c++
-	- [x] envoyer message
-	- [x] recevoir message
-	- [x] passer en mode non bloquant
-	- [x] utiliser poll ou equivalent
-	- [x] close les clients qui se deconnecte
-	- [x] alloue notre tableau
-	- [x] realloue notre tableau si le nombre de client max est atteind
-	- [x] repondre aux messages des clients
-	- [ ] utiliser les fichiers de conf
-- [ ] Parsing des fichiers de conf
-	- [x] Prendre chemin en argument
-	- [x] Chemin par defaut
-	- [x] Recuperer le port
-	- [ ] Serveur utilise le port du fichier de conf
-	- [ ] Recuperer le host
-	- [ ] Serveur utilise le host du fichier de conf
-- [ ] parsing des requetes clients
-	- [ ] analyse messages requetes
-- [ ] creation des reponses du serveur
-	- [ ] header
-	- [ ] body => aller chercher le fichier correspondant
-	- [ ] adapter les status de reponse
-	- [ ] envoyer au client
-- [ ] gerer les methodes POST et DELETE en plus de GET
-
-## Doc
-
-- [socket](https://www.youtube.com/watch?v=s3o5tixMFho)
-- [select/poll/epoll](https://www.youtube.com/watch?v=dEHZb9JsmOU)
-- [webserv](https://webserv42.notion.site/webserv42/Webserv-cbb6ab4136ba4b4c8cb4f98109d5fc1f)

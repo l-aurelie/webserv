@@ -34,5 +34,5 @@ obj/
 *.app
 webserv
 
-src/man_poll.c
+.vscode/
 Struct_pseudo_code
