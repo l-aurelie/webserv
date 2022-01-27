@@ -1,17 +1,51 @@
-GET / HTTP/1.1
+Version protocole : http 1.1 sinon erreur.
+Methode : utilise par le client pour le type de requete. Comportement a adapter selon la methode (GET, POST) DELETE supprimer une ressource, GET demande ressource, POST envoyer qqch au server
+Host : Server_name:port
+Connection: keep alive sinon erreur ? 
+Accept : permet de savoir ce que client peut interpreter, le reste il va le download
+
+- On doit parser notre requete
+	-Un objet requete (de base on prend la string de requete quon parse en creant l'objet requete)
+- Si valide l analyser (creation de la reponse +- dans l objet requete)
+- Notre reponse va contenir : Header (en protocole http 1.1) et un body qui va etre la reponse en elle meme
+- Answer request
+
+index index.html php.html;
+root /var/www/aurelie/;
+
+ls /var/www/aurelie/
+ - src/
+ - img.png
+ - icon.jpg
+ - php.html
+ - site.php
+
+GET [root]/[index] HTTP/1.1
 Host: antoine.localhost:30000
 
-
-
-
+Connection: keep-alive
 
 User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:96.0) Gecko/20100101 Firefox/96.0
+
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
 Accept-Language: fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3
 Accept-Encoding: gzip, deflate
-Connection: keep-alive
+
 Upgrade-Insecure-Requests: 1
 Sec-Fetch-Dest: document
 Sec-Fetch-Mode: navigate
 Sec-Fetch-Site: none
 Sec-Fetch-User: ?1
+
+
+
+REPONSE 
+HTTP/1.1 200 OK
+Server: nginx/1.18.0
+Date: Mon, 24 Jan 2022 10:04:45 GMT
+Content-Type: text/html
+Last-Modified: Wed, 15 Dec 2021 22:37:06 GMT
+Transfer-Encoding: chunked
+Connection: keep-alive
+ETag: W/"61ba6e12-7b"
+Content-Encoding: gzip
