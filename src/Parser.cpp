@@ -12,7 +12,6 @@ namespace Parser
 
 static void openConfigFile(std::string const& path, std::ifstream &readFile) {
 	readFile.open(path.c_str());
-	//readFile(path);
 	if (readFile.fail())
 	{
 		std::cerr << "error: cannot open config file '" << path << "'" << std::endl;
@@ -27,8 +26,11 @@ static Conf parse_directives(std::stringstream & ss) {
 
 	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("listen", &Conf::setListen));
 	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("server_name", &Conf::setServerName));
+	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("autoindex", &Conf::setAutoindex));
+	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("index", &Conf::setIndex));
+	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("root", &Conf::setRoot));
+	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("client_max_body_size", &Conf::setClientMaxBodySize));
 
-	//std::cout << "ss = |" << ss.str() << "|" << std::endl;
 	ss >> word;
 	while (!ss.eof())
 	{
@@ -45,6 +47,11 @@ static Conf parse_directives(std::stringstream & ss) {
 		ss >> word;
 		while (word != ";")
 		{
+			if (ss.eof())
+			{
+				std::cerr << "error: config file: syntax error missing ';'" << std::endl;
+				exit(EXIT_FAILURE);
+			}
 			vec.push_back(word);
 			ss >> word;
 		}
@@ -54,7 +61,7 @@ static Conf parse_directives(std::stringstream & ss) {
 	return (conf);
 }
 
-std::vector<Conf> parse(std::string const& path) {
+std::vector<Conf> parse_conf(std::string const& path) {
 
 	std::vector<Conf> confs;
 	std::ifstream readFile;
@@ -62,13 +69,6 @@ std::vector<Conf> parse(std::string const& path) {
 	openConfigFile(path, readFile);
 	ss << readFile.rdbuf();
 
-	/*
-		while(!ss.eof())
-		{
-			new_conf = parse_conf_bloc(return_conf_bloc(ss));
-			confs.push_back(new_conf);
-		}	
-	*/
 	std::string buf;
 	ss >> buf;
 	while (!ss.eof())
@@ -76,17 +76,17 @@ std::vector<Conf> parse(std::string const& path) {
 		std::stringstream blockStream;
 		if (buf != "server"){ // maybe keywords before first "server {"
 			std::cerr << "conf file erreur: no 'server' keyword \n";
-			break ;
+			exit(EXIT_FAILURE);
 		}
 		ss >> buf;
 		if (buf != "{"){
 			std::cerr << "conf file erreur: no '{' after 'server' \n";
-			break ;
+			exit(EXIT_FAILURE);
 		}
 		else if (buf == "{"){
 			ss >> buf;
-			while (!ss.eof() && buf != "}" && buf != "server" && buf != "{"){ // inside a server block
-				if (buf[buf.length() - 1] == ';'){ // word ending with ;, e.g. hello;
+			while (!ss.eof() && buf != "}" && buf != "server" && buf != "{"){ 
+				if (buf[buf.length() - 1] == ';'){
 					buf = buf.substr(0, buf.length() - 1);
 					blockStream << buf << " ; ";
 				}
@@ -94,21 +94,18 @@ std::vector<Conf> parse(std::string const& path) {
 					blockStream << buf << " ";
 				ss >> buf;
 			}
-			// stringstream blockStream either valid either == "";
 			if (buf == "}"){
-			//	std::cout << "blockstream: " << blockStream.str() << '\n';
 				confs.push_back(parse_directives(blockStream));
 			}
 			else{
 				ss.str("");
 				blockStream.str("");
 				std::cerr << "conf file erreur, end wihtout '}' \n";
-				break ;
+				exit(EXIT_FAILURE);
 			}
 		}
 		ss >> buf;
 	}
-
 	readFile.close();
 	return (confs);
 }

@@ -5,6 +5,6 @@
 
 namespace Parser {
 
-std::vector<Conf>	parse(std::string const& path);
+std::vector<Conf>	parse_conf(std::string const& path);
 
 }

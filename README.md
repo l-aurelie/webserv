@@ -33,6 +33,8 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] Recuperer le host
 	- [ ] Serveur utilise le host du fichier de conf
 	- [x] Decouper le fichier de configuration dans des objets Conf
+	- [ ] Checker mauvaises infos du fichier de config
+	- [ ] Gerer clientbodysize taille (m, g, k)
 - [ ] parsing des requetes clients
 	- [ ] analyse messages requetes
 - [ ] creation des reponses du serveur

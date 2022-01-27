@@ -37,8 +37,6 @@ int Server::getSocket(void) const {
 }
 
 int Server::initServ(int port) {
-
-
 	struct sockaddr_in addrServer;
 	addrServer.sin_addr.s_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
@@ -98,27 +96,24 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 
 void Server::launch(void)
 {
-	while (true)
+	if (poll(&fds[0], fds.size(), 0) != -1) // TODO: add timeout ?
 	{
-		if(poll(&fds[0], fds.size(), -1) != -1)	// TODO: add timeout ?
+		if (fds[0].revents & POLLIN)
 		{
-			if (fds[0].revents & POLLIN)
-			{
-				this->acceptClient();
-				continue ;
-			}
+			this->acceptClient();
+			return;
+		}
 
-			for (std::vector<struct pollfd>::iterator it = fds.begin()++; it != fds.end(); it++)
+		for (std::vector<struct pollfd>::iterator it = fds.begin()++; it != fds.end(); it++)
+		{
+			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT))) // le client nous envoie un message
+				listenRequest(it);
+			else if (it->revents == POLLOUT && msg_to_client.count(it->fd)) // le client est pret a recevoir un message
+				answerRequest(it);
+			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // le client se deconnecte
 			{
-				if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
-					listenRequest(it);
-				else if (it->revents == POLLOUT && msg_to_client.count(it->fd))
-					answerRequest(it);
-				else if (it->revents & POLLERR || it->revents & POLLRDHUP)
-				{
-					endConnection(it);
-					break ;
-				}
+				endConnection(it);
+				break;
 			}
 		}
 	}
