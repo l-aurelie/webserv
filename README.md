@@ -23,12 +23,12 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] alloue notre tableau
 	- [x] realloue notre tableau si le nombre de client max est atteind
 	- [x] repondre aux messages des clients
-	- [ ] utiliser les fichiers de conf
+	- [x] utiliser les fichiers de conf
 - [ ] Parsing des fichiers de conf
 	- [x] Prendre chemin en argument
 	- [x] Chemin par defaut
 	- [x] Recuperer le port
-	- [ ] Serveur utilise le port du fichier de conf
+	- [x] Serveur utilise le port du fichier de conf
 	- [ ] gerer le mot clef default_server dans la directive listen
 	- [x] Recuperer le host
 	- [ ] Serveur utilise le host du fichier de conf

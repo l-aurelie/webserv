@@ -1,23 +1,25 @@
-server {
-	listen 8888;
-	server_name localhost aurelie.localhost;
-	index index.html;
-	root /var/www/aurelie/;
+DANS MAIN POUR LANCER LES SERVER:
+{
+	while(itere sur la map)
+	{
+		- nouveau_webserv(vector qui correspond a lindex de la map)//creation de l objet avec le vector correpondant au listen en parametre
+		- serverInit(index de map key listen)//on lui passe le port
+	}
 }
 
-server {
-	listen 8888;
-	server_name localhost antoine.localhost;
-	index index.html;
-	root /var/www/antoine/;
-}
 
-server {
-	listen 9999;
-	server_name localhost haopeng.localhost;
-	index index.html;
-	root /var/www/haopeng/;
-}
+#si je veux antoine du 80
+#si un seul listen 8080 alors objet sur
+#si deux listen 80, et qu on demande localhost
+
+localhost => /var/www/aurelie/
+aurelie.localhost => /var/www/aurelie/
+antoine.localhost => /var/www/antoine/
+
+server ecoute sur le port 80
+
+aurelie.localhost communique
+antoine.localhost communique
 
 server {
 	listen 8808;

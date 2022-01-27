@@ -1,4 +1,7 @@
+#include "Conf.hpp"
+#include "Server.hpp"
 #include <arpa/inet.h>
+#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <poll.h>
@@ -6,22 +9,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
-#include "Server.hpp"
 
-Server::Server(void) {
-	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
-	std::cout << "Server id = " << this->socketServer << std::endl;
+Server::Server(std::vector<Conf> confs) : confs(confs) {}
 
-	int	enable = 1;
-	if (setsockopt(this->socketServer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
-		std::cerr << "setsockopt(SO_REUSEADDR) failed" << std::endl;
+Server::Server(Server const& rhs) { 
+	*this = rhs;
 }
 
-Server::Server(Server const& rhs) { *this = rhs; }
-
-Server::~Server(void) {
-	close(this->socketServer);
-}
+Server::~Server(void) { close(this->socketServer); }
 
 Server&	Server::operator=(Server const& rhs) {
 	if (this == &rhs)
@@ -29,6 +24,7 @@ Server&	Server::operator=(Server const& rhs) {
 	this->socketServer = rhs.socketServer;
 	this->fds = rhs.fds;
 	this->msg_to_client = rhs.msg_to_client;
+	this->confs = rhs.confs;
 	return (*this);
 }
 
@@ -37,6 +33,14 @@ int Server::getSocket(void) const {
 }
 
 int Server::initServ(int port) {
+	std::cout << "New server on " << confs[0].getListen() << std::endl;
+
+	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
+
+	int	enable = 1;
+	if (setsockopt(this->socketServer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
+		std::cerr << "setsockopt(SO_REUSEADDR) failed" << std::endl;
+
 	struct sockaddr_in addrServer;
 	addrServer.sin_addr.s_addr = inet_addr("127.0.0.1");
 	addrServer.sin_family = AF_INET;
@@ -48,7 +52,12 @@ int Server::initServ(int port) {
 		close(this->socketServer);
 		return (false);
 	}
-	listen(this->socketServer, 5);
+	if (listen(this->socketServer, 5) == -1)
+	{
+		std::cerr << "listen socketServer issue\n";
+		close(this->socketServer);
+		exit(EXIT_FAILURE);
+	}
 
 	struct pollfd pfd;
 	pfd.fd = getSocket();
@@ -107,7 +116,9 @@ void Server::launch(void)
 		for (std::vector<struct pollfd>::iterator it = fds.begin()++; it != fds.end(); it++)
 		{
 			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT))) // le client nous envoie un message
+			{
 				listenRequest(it);
+			}
 			else if (it->revents == POLLOUT && msg_to_client.count(it->fd)) // le client est pret a recevoir un message
 				answerRequest(it);
 			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // le client se deconnecte

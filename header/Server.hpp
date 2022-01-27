@@ -1,12 +1,13 @@
 #pragma once
 
+#include <Conf.hpp>
 #include <vector>
 #include <map>
 
 class Server
 {
 	public:
-		Server();
+		Server(std::vector<Conf> confs);
 		Server(Server const& rhs);
 		~Server();
 
@@ -15,8 +16,11 @@ class Server
 		void launch();
 
 		Server& operator=(Server const& rhs);
+		std::vector<Conf> confs;	// TODO: passer en private
 	
 	private:
+		Server();
+		
 		int	socketServer;
 		std::vector<struct pollfd> fds;
 		std::map<int, std::string> msg_to_client;

@@ -1,10 +1,11 @@
 #include "Parser.hpp"
 #include <cstdlib>
-#include <string>
+#include <iostream>
 #include <fstream>
 #include <map>
 #include <sstream>
-#include <iostream>
+#include <stdint.h>
+#include <string>
 #include <vector>
 
 namespace Parser
@@ -61,9 +62,10 @@ static Conf parse_directives(std::stringstream & ss) {
 	return (conf);
 }
 
-std::vector<Conf> parse_conf(std::string const& path) {
+std::map< uint16_t, std::vector<Conf> > parse_conf(std::string const& path) {
 
-	std::vector<Conf> confs;
+	std::map< uint16_t, std::vector<Conf> > confs;
+	Conf conf;
 	std::ifstream readFile;
 	std::stringstream ss;
 	openConfigFile(path, readFile);
@@ -95,7 +97,8 @@ std::vector<Conf> parse_conf(std::string const& path) {
 				ss >> buf;
 			}
 			if (buf == "}"){
-				confs.push_back(parse_directives(blockStream));
+				conf = parse_directives(blockStream);
+				confs[conf.getListen()].push_back(conf);
 			}
 			else{
 				ss.str("");
