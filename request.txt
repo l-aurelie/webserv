@@ -20,7 +20,7 @@ ls /var/www/aurelie/
  - php.html
  - site.php
 
-GET [root]/[index] HTTP/1.1
+GET / HTTP/1.1
 Host: antoine.localhost:30000
 
 Connection: keep-alive

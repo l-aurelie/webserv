@@ -4,9 +4,10 @@ O			=	obj/
 D			=	dep/
 
 NAME		=	webserv
-SRC			=	main.cpp \
-				Conf.cpp \
-				Parser.cpp \
+SRC			=	main.cpp	\
+				Conf.cpp	\
+				Parser.cpp	\
+				Request.cpp	\
 				Server.cpp
 
 OBJ			=	$(SRC:%.cpp=$O%.o)

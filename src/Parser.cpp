@@ -1,4 +1,5 @@
 #include "Parser.hpp"
+#include "Request.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -7,6 +8,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <string> // std::getline() std::append()
 
 namespace Parser
 {
@@ -20,17 +22,17 @@ static void openConfigFile(std::string const& path, std::ifstream &readFile) {
 	}
 }
 
-static Conf parse_directives(std::stringstream & ss) {
+static Conf parseDirectives(std::stringstream & ss) {
 	Conf conf;
 	std::string word;
 	std::map<std::string, void (Conf::*)(std::vector<std::string> const&)> directives;
 
-	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("listen", &Conf::setListen));
-	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("server_name", &Conf::setServerName));
-	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("autoindex", &Conf::setAutoindex));
-	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("index", &Conf::setIndex));
-	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("root", &Conf::setRoot));
-	directives.insert(std::pair<std::string, void (Conf::*)(std::vector<std::string> const& )>("client_max_body_size", &Conf::setClientMaxBodySize));
+	directives["listen"] = &Conf::setListen;
+	directives["server_name"] = &Conf::setServerName;
+	directives["autoindex"] = &Conf::setAutoindex;
+	directives["index"] = &Conf::setIndex;
+	directives["root"] = &Conf::setRoot;
+	directives["client_max_body_size"] = &Conf::setClientMaxBodySize;
 
 	ss >> word;
 	while (!ss.eof())
@@ -62,7 +64,7 @@ static Conf parse_directives(std::stringstream & ss) {
 	return (conf);
 }
 
-std::map< uint16_t, std::vector<Conf> > parse_conf(std::string const& path) {
+std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 
 	std::map< uint16_t, std::vector<Conf> > confs;
 	Conf conf;
@@ -97,7 +99,7 @@ std::map< uint16_t, std::vector<Conf> > parse_conf(std::string const& path) {
 				ss >> buf;
 			}
 			if (buf == "}"){
-				conf = parse_directives(blockStream);
+				conf = parseDirectives(blockStream);
 				confs[conf.getListen()].push_back(conf);
 			}
 			else{
@@ -111,6 +113,148 @@ std::map< uint16_t, std::vector<Conf> > parse_conf(std::string const& path) {
 	}
 	readFile.close();
 	return (confs);
+}
+
+static std::string tolowerstr(std::string str){
+	std::string ans;
+	for (size_t i = 0; i < str.length(); i++){
+		ans.append(1, tolower(str[i]));
+	}
+	return ans;
+}
+
+//TODO : parse plusieurs line
+static Request parseFields(std::stringstream & header_buf, Request & request) {
+	std::string word;
+	std::string line;
+	std::string key;
+	std::vector<std::string> values;
+	std::map<std::string, void (Request::*)(std::vector<std::string> &)> fields;
+
+	fields["host"] = &Request::setHost;
+	fields["user-agent"] = NULL;
+
+	fields["connection"] = NULL;
+
+	fields["accept"] = NULL;
+	fields["accept-language"] = NULL;
+	fields["accept-encoding"] = NULL;
+
+	fields["upgrade-insecure-requests"] = NULL;
+
+	fields["sec-fetch-dest"] = NULL;
+	fields["sec-fetch-mode"] = NULL;
+	fields["sec-fetch-site"] = NULL;
+	fields["sec-fetch-user"] = NULL;
+
+	fields["referer"] = NULL;
+
+	std::getline(header_buf, line);//pour clear la "premiere ligne"
+	while (std::getline(header_buf, line) && line != "\r")//tant que pas fin header_buff
+	{
+		//std::cout << "line size = " << line.length() << ": " << (int)line[0] << std::endl;
+		if(line.find(":") == std::string::npos)// si un : else erreur
+		{
+			std::cerr << "Bad request: syntax error ':' not found" << std::endl;
+			exit(EXIT_FAILURE);//TODO gestion erreur BAD REQUEST
+		}
+		std::stringstream ss;
+		ss << line;
+		ss >> key; // on met le premier mot dans key
+		key = tolowerstr(key);//insensible a la casse
+		if (key[key.length() - 1] != ':') // key doit toujours se terminer par ':'
+		{
+			std::cerr << "Bad request: syntax error key must be followed by ':'" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		key = key.substr(0, key.length() - 1);
+		if (fields.count(key) <= 0)//si la clef nextiste pas dans map
+		{
+			std::cerr << "error: request: unknow keyword '" << key << "'" << std::endl;
+			exit(EXIT_FAILURE);//TODO gestion erreur BAD REQUEST
+		}
+		while(!ss.eof() && ss >> word)// tant que pas fin ligne on ajoute les mot dans la vector value
+			values.push_back(word);
+
+		if (fields[key])
+			(request.*(fields[key]))(values);
+	}
+	std::cout << request << std::endl;	// debug curr request
+	return request;
+}
+			/*
+			//key << word;
+	//		while(word != ":")//tant que != ":" met dans key
+	//		{
+	//			key << word;
+	//		}
+			else
+			{
+				ss >> word; // key [vide]
+				while(!ss.eof())// tant que pas fin ligne on ajoute les mot dans la vector value
+				{
+					values.push_back(word);
+					ss >> word;	
+				}
+				while(getline(header_buf, line))
+				{
+					if(line.find(":") != std::string::npos)
+						break;
+					if(line[0] != '\t' && line[0] != ' ')
+					{
+						std::cerr << "Bad request : multiple lines must begin with tabulation or space" << std::endl;
+						exit(EXIT_FAILURE);//TODO GESTION ERREUR REQUEST STATUS
+					}
+					ss << line;
+					ss >> word;
+					while(!ss.eof())// tant que pas fin ligne on ajoute les mot dans la vector value
+					{
+						values.push_back(word);
+						ss >> word;	
+					}				
+				}
+			}
+			(request.*(fields[key.str()]))(values);
+			std::cout << "request = |" << request << "|" << std::endl;	// debug curr request
+		}
+		else//la premiere ligne contient pas :
+		{
+			std::cerr << "Bad request : syntax in header request : usage [key] : [value] or [key] : [value1] [value2] [...] \n [value3]" << std::endl;
+			exit(EXIT_FAILURE);//TODO GESTION ERREUR REQUEST STATUS
+		}
+	}
+	return (request);
+}
+
+*/
+
+//TODO nenvoyer que le header et pas le body dans ss ??
+Request parseRequest(char *requestMsg){
+	std::stringstream ss;
+	std::string buf;
+	Request request;
+
+	ss << requestMsg;
+	ss >> buf;
+	if (buf != "POST" && buf != "GET" && buf != "DELETE"){
+		std::cerr << "unknown method\n";
+		exit(EXIT_FAILURE); // return msg to client
+	}
+	else
+		request.setMethod(buf);
+	ss >> buf;
+	// path: file to add with root => [root]/[index]
+	if (buf[0] != '/') // path must start with /
+		exit(EXIT_FAILURE); // return msg to client
+	else
+		request.setPath(buf);
+	ss >> buf;
+	if (buf != "HTTP/1.1") // protocol version
+		exit(EXIT_FAILURE); // return msg to client
+ 	else
+		request.setProtocolVersion(buf);
+	parseFields(ss, request); // ss curseur sur la 2 eme ligne
+	return request;
 }
 
 } // namespace Parser

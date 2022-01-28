@@ -1,5 +1,7 @@
 #include "Conf.hpp"
 #include "Server.hpp"
+#include "Request.hpp"
+#include "Parser.hpp"
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <iostream>
@@ -11,11 +13,7 @@
 #include <vector>
 
 Server::Server(std::vector<Conf> confs) : confs(confs) {}
-
-Server::Server(Server const& rhs) { 
-	*this = rhs;
-}
-
+Server::Server(Server const& rhs) { *this = rhs; }
 Server::~Server(void) { close(this->socketServer); }
 
 Server&	Server::operator=(Server const& rhs) {
@@ -80,13 +78,17 @@ void Server::acceptClient(void) {
 }
 
 void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
-	char buf[4096 + 1];
+	char buf[4096 + 1];//TODO recuperer taille standard doc RFC
 	int read = recv(it->fd, buf, 4096, 0);
 	if (read == -1)
 		std::cerr << "error recv" << std::endl;
 	buf[read] = '\0';
-	std::cout << "Client " << it->fd << " says: " << buf;
-	msg_to_client[it->fd] = "hell \n";
+	std::cout << "--------\n";
+	std::cout << "Client " << it->fd << " says: \n" << buf;
+	std::cout << "--------\n";
+	Request resquest = Parser::parseRequest(buf);
+	// formuler la reponse dans un string/char* ?
+	msg_to_client[it->fd] = "hell \n"; // enregistre msg a repondre au client
 }
 
 void Server::answerRequest(std::vector<struct pollfd>::iterator it) {

@@ -24,6 +24,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] realloue notre tableau si le nombre de client max est atteind
 	- [x] repondre aux messages des clients
 	- [x] utiliser les fichiers de conf
+	- [ ] revoir la maniere dont le client se deconnecte (deconnexion entre 2 requetes a partir du navigateur)
 - [ ] Parsing des fichiers de conf
 	- [x] Prendre chemin en argument
 	- [x] Chemin par defaut
@@ -36,13 +37,16 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [ ] Checker mauvaises infos du fichier de config
 	- [ ] Gerer clientbodysize taille (m, g, k)
 - [ ] parsing des requetes clients
-	- [ ] analyse messages requetes
+	- [x] analyse messages requetes
+	- [x] create d'objet Request
+	- [ ] gerer les field-values multiligne
 - [ ] creation des reponses du serveur
 	- [ ] header
 	- [ ] body => aller chercher le fichier correspondant
 	- [ ] adapter les status de reponse
 	- [ ] envoyer au client
-- [ ] gerer les methodes POST et DELETE en plus de GET
+	- [ ] default error page
+	- [ ] adapter les reponses en fonction de la Conf
 
 ## Doc
 
@@ -92,4 +96,5 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 			- [ ] run in correct directory for relative path
 
 - [ ] Error messages
+- [ ] add const and references
 - [ ] Leaks

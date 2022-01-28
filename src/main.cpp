@@ -20,7 +20,7 @@ int	main(int argc, char **argv) {
 	if(argc == 2)
 		path = argv[1];
 
-	std::map< uint16_t, std::vector<Conf> > confs = Parser::parse_conf(path);
+	std::map< uint16_t, std::vector<Conf> > confs = Parser::parseConf(path);
 
 	std::vector<Server> servers;
 	for (std::map<uint16_t, std::vector<Conf> >::iterator it = confs.begin(); it != confs.end(); it++){
