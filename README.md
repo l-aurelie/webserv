@@ -30,10 +30,10 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] Chemin par defaut
 	- [x] Recuperer le port
 	- [x] Serveur utilise le port du fichier de conf
-	- [ ] gerer le mot clef default_server dans la directive listen
 	- [x] Recuperer le host
-	- [ ] Serveur utilise le host du fichier de conf
+	- [x] Serveur utilise le host du fichier de conf
 	- [x] Decouper le fichier de configuration dans des objets Conf
+	- [ ] gerer le mot clef default_server dans la directive listen
 	- [ ] Checker mauvaises infos du fichier de config
 	- [ ] Gerer clientbodysize taille (m, g, k)
 - [ ] parsing des requetes clients
@@ -41,10 +41,10 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] create d'objet Request
 	- [ ] gerer les field-values multiligne
 - [ ] creation des reponses du serveur
-	- [ ] header
-	- [ ] body => aller chercher le fichier correspondant
+	- [x] header
+	- [x] body => aller chercher le fichier correspondant
+	- [x] envoyer au client
 	- [ ] adapter les status de reponse
-	- [ ] envoyer au client
 	- [ ] default error page
 	- [ ] adapter les reponses en fonction de la Conf
 

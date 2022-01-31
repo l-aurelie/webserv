@@ -37,15 +37,50 @@ Sec-Fetch-Mode: navigate
 Sec-Fetch-Site: none
 Sec-Fetch-User: ?1
 
+Preparer la reponse
+Anylyser
+Si GET POST DELETE voir le path sil est bon ou pas
+Gerer les erreurs
+Gerer le status
 
+On doit enregistrer les status codes 
 
-REPONSE 
+Reponse bad request ================================================================:
+
+HTTP/1.1 400 Bad Request
+Server: nginx/1.18.0
+Date: Mon, 31 Jan 2022 09:46:34 GMT
+Content-Type: text/html
+Content-Length: 255
+Connection: close
+
+<html>
+<head><title>400 The plain HTTP request was sent to HTTPS port</title></head>
+<body>
+<center><h1>400 Bad Request</h1></center>
+<center>The plain HTTP request was sent to HTTPS port</center>
+<hr><center>nginx/1.18.0</center>
+</body>
+</html>
+
+Reponse OK ================================================================:
+
 HTTP/1.1 200 OK
 Server: nginx/1.18.0
-Date: Mon, 24 Jan 2022 10:04:45 GMT
+Date: Mon, 31 Jan 2022 09:51:11 GMT
 Content-Type: text/html
 Last-Modified: Wed, 15 Dec 2021 22:37:06 GMT
 Transfer-Encoding: chunked
 Connection: keep-alive
 ETag: W/"61ba6e12-7b"
 Content-Encoding: gzip
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>agautier.fr</title>
+</head>
+<body>
+	<h1>Welcome on agautier.fr</h1>
+</body>
+</html>

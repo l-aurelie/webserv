@@ -135,6 +135,8 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	fields["user-agent"] = NULL;
 
 	fields["connection"] = NULL;
+	fields["pragma"] = NULL;
+	fields["cache-control"] = NULL;
 
 	fields["accept"] = NULL;
 	fields["accept-language"] = NULL;
@@ -228,7 +230,6 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 
 */
 
-//TODO nenvoyer que le header et pas le body dans ss ??
 Request parseRequest(char *requestMsg){
 	std::stringstream ss;
 	std::string buf;

@@ -3,6 +3,7 @@
 #include <Conf.hpp>
 #include <vector>
 #include <map>
+#include <cstring>
 
 class Server
 {
@@ -24,7 +25,6 @@ class Server
 		int	socketServer;
 		std::vector<struct pollfd> fds;
 		std::map<int, std::string> msg_to_client;
-
 		void acceptClient();
 		void answerRequest(std::vector<struct pollfd>::iterator);
 		void listenRequest(std::vector<struct pollfd>::iterator);

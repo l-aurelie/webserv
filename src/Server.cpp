@@ -2,6 +2,7 @@
 #include "Server.hpp"
 #include "Request.hpp"
 #include "Parser.hpp"
+#include "Response.hpp"
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <iostream>
@@ -88,13 +89,27 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
 	std::cout << "--------\n";
 	Request resquest = Parser::parseRequest(buf);
 	// formuler la reponse dans un string/char* ?
-	msg_to_client[it->fd] = "hell \n"; // enregistre msg a repondre au client
+	Response response;
+	msg_to_client[it->fd] = response.prepareResponse(resquest, confs); //toutes les confs d'un port
+
+
+	//msg_to_client[it->fd] = "HTTP/1.1 400 Bad Request\n"; // enregistre msg a repondre au client
+	//msg_to_client[it->fd] = "hell\n";
+	//	msg_to_client[it->fd] = "HTTP/1.1 200 OK\nServer: nginx/1.18.0\nDate: Mon, 31 Jan 2022 09:51:11 GMT\nContent-Type: text/html\nContent-Length: 131\nLast-Modified: Wed, 15 Dec 2021 22:37:06 GMT\nConnection: close\n\n<!DOCTYPE html>\n<html>\n<head>\n<title>agautier.fr</title>\n</head>\n<body>\n<h1>Welcome on agautier.fr</h1>\n</body>\n</html>\n\n";
+
+	//msg_to_client[it->fd] = "HTTP/1.1 400 Bad Request\nContent-Type: text/html\nContent-Length: 122\n\n<html>\n<head><title>400 Bad Request</title></head>\n<body>\n<center><h1>400 Bad Request</h1></center>\n</body>\n</html>\n";
+
+	//msg_to_client[it->fd] = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 131\n\n<!DOCTYPE html>\n<html>\n<head>\n<title>agautier.fr</title>\n</head>\n<body>\n<h1>Welcome on agautier.fr</h1>\n</body>\n</html>\n\n";
+
+	//msg_to_client[it->fd] = "HTTP/1.1 400 Bad Request\n\n";
+	//msg_to_client[it->fd] = "HTTP/1.1 200 OK\n\n";
 }
 
 void Server::answerRequest(std::vector<struct pollfd>::iterator it) {
+	std::cout << "Response: " << msg_to_client[it->fd] << std::endl;
 	if (send(it->fd, msg_to_client[it->fd].c_str(), msg_to_client[it->fd].length(), 0) <= 0)
 		std::cerr << "send error \n";
-	msg_to_client.erase(it->fd);
+	msg_to_client.erase(it->fd);	// optional if endConnection
 }
 
 void Server::endConnection(std::vector<struct pollfd>::iterator it)
@@ -122,7 +137,11 @@ void Server::launch(void)
 				listenRequest(it);
 			}
 			else if (it->revents == POLLOUT && msg_to_client.count(it->fd)) // le client est pret a recevoir un message
+			{
 				answerRequest(it);
+				endConnection(it);
+				break ;
+			}
 			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // le client se deconnecte
 			{
 				endConnection(it);
