@@ -131,6 +131,7 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	std::vector<std::string> values;
 	std::map<std::string, void (Request::*)(std::vector<std::string> &)> fields;
 
+	std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
 	fields["host"] = &Request::setHost;
 	fields["user-agent"] = NULL;
 
@@ -152,8 +153,10 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	fields["referer"] = NULL;
 
 	std::getline(header_buf, line);//pour clear la "premiere ligne"
+//	std::cout << "1st line = " << line << std::endl;
 	while (std::getline(header_buf, line) && line != "\r")//tant que pas fin header_buff
 	{
+//		std::cout << "line = " << line << std::endl;
 		//std::cout << "line size = " << line.length() << ": " << (int)line[0] << std::endl;
 		if(line.find(":") == std::string::npos)// si un : else erreur
 		{
@@ -236,6 +239,7 @@ Request parseRequest(char *requestMsg){
 	Request request;
 
 	ss << requestMsg;
+	std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
 	ss >> buf;
 	if (buf != "POST" && buf != "GET" && buf != "DELETE"){
 		std::cerr << "unknown method\n";

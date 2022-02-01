@@ -9,6 +9,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <vector>
+#include <cstdio>
 
 bool Response::selectConf(std::vector<Conf> & confs, Request & request, Conf & ret) const {
 	for (std::vector<Conf>::const_iterator it = confs.begin(); it != confs.end(); ++it)
@@ -95,6 +96,7 @@ std::string Response::findFilePath(Request & request, Conf & conf)
 	if (stat(path.c_str(), &infos) == -1)
 	{
 		statusCode = "404 Not Found";
+	//	setError(404); // => Set statusCode, setHeader, setBody
 		return ("");
 	}
 	else if (infos.st_mode & S_IFDIR || !(infos.st_mode & S_IRUSR))
@@ -107,14 +109,43 @@ std::string Response::findFilePath(Request & request, Conf & conf)
 
 void Response::fillBody(Request & request, Conf conf)
 {
-
 	statusCode = "200 OK";
-	std::string path = findFilePath(request, conf);
-	if (path.empty())
-		return ;
-
-	std::ifstream f(path.c_str());
-	std::stringstream buf;
-	buf << f.rdbuf();
-	body = buf.str();
+	if (request.getMethod() == "GET")
+	{
+		std::string path = findFilePath(request, conf);
+		if (path.empty())
+			return ;
+		std::ifstream f(path.c_str());
+		std::stringstream buf;
+		buf << f.rdbuf();
+		body = buf.str();
+	}
+	else if (request.getMethod() == "DELETE")
+	{
+		struct stat infos;
+		std::string path = conf.getRoot() + "/" + request.getPath();
+		if (stat(path.c_str(), &infos) == -1)
+		{
+			statusCode = "404 Not Found";
+			return ;
+		}
+		else if (!(infos.st_mode & S_IWUSR))
+		{
+			statusCode = "403 Forbidden";
+			return ;
+		}
+		//else if (infos.st_mode & S_IFDIR)
+		//else (409 Conflict) // dossier droit r mais pas droit r dans sous dossier
+		//{}
+		remove(path.c_str());
+		statusCode = "204 No Content";
+	}
+	else if (request.getMethod() == "POST")
+	{
+	}
+	else
+	{
+		//error 
+	}
 }
+

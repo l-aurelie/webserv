@@ -44,9 +44,21 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] header
 	- [x] body => aller chercher le fichier correspondant
 	- [x] envoyer au client
-	- [ ] adapter les status de reponse
-	- [ ] default error page
+	- [x] DELETE
+	- [ ] POST
+	- [ ] adapter les status de reponse----
+	- [ ] default error page----
 	- [ ] adapter les reponses en fonction de la Conf
+	- [ ] body size
+
+## Fix
+
+- Notre server execute la requete des la premiere ligne envoyee a nc
+- [x] Dans request, Host n'apparait pas si on ne specifie pas le port ex: 'Host: localhost'
+- [x] Si on specifie un port aleatoire, il est ignore et la requete fonctionne
+- [ ] impossible de supprimer un dossier
+- [ ] 409 Conflict when rm a folder that contains a file without perms
+- [ ] Test delete on browser
 
 ## Doc
 

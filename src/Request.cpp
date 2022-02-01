@@ -36,15 +36,20 @@ void Request::setMethod(std::string method) { this->method = method; }
 void Request::setPath(std::string path) { this->path = path; }
 void Request::setProtocolVersion(std::string protocolVersion) { this->protocolVersion = protocolVersion; }
 void Request::setHost(std::vector<std::string> & values) {
+	std::cout << "Setter Host called" << std::endl;
 	if (values.size() != 1)
 	{
 		std::cerr << "error: request : 'host' accepts only one host" << std::endl;
 		exit(EXIT_FAILURE);	// TODO: error response
 	}
+//	std::cout << "values[0] = " << values[0] << std::endl;
 	std::string delimiter = ":";
 	std::size_t colon_position = values[0].find(delimiter);
 	if (colon_position == values[0].npos)	// if no ':' then port is 80 by default
+	{
+		this->serverName = values[0];
 		return ;
+	}
 	this->serverName = values[0].substr(0, colon_position);
 
 	std::stringstream ss;

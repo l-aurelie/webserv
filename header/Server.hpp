@@ -13,8 +13,9 @@ class Server
 		~Server();
 
 		int initServ(int port);
-		int getSocket() const;
 		void launch();
+
+		int getSocket() const;
 
 		Server& operator=(Server const& rhs);
 		std::vector<Conf> confs;	// TODO: passer en private
@@ -25,6 +26,7 @@ class Server
 		int	socketServer;
 		std::vector<struct pollfd> fds;
 		std::map<int, std::string> msg_to_client;
+
 		void acceptClient();
 		void answerRequest(std::vector<struct pollfd>::iterator);
 		void listenRequest(std::vector<struct pollfd>::iterator);
