@@ -18,7 +18,7 @@ static void openConfigFile(std::string const& path, std::ifstream &readFile) {
 	if (readFile.fail())
 	{
 		std::cerr << "error: cannot open config file '" << path << "'" << std::endl;
-		exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE); // g_error
 	}
 }
 
@@ -44,7 +44,7 @@ static Conf parseDirectives(std::stringstream & ss) {
 		if (directives.count(key) <= 0)
 		{
 			std::cerr << "error: unknow config file keyword '" << word  << "'" << std::endl;
-			exit(EXIT_FAILURE);
+			exit(EXIT_FAILURE); //g_error
 		}
 
 		ss >> word;
@@ -53,7 +53,7 @@ static Conf parseDirectives(std::stringstream & ss) {
 			if (ss.eof())
 			{
 				std::cerr << "error: config file: syntax error missing ';'" << std::endl;
-				exit(EXIT_FAILURE);
+				exit(EXIT_FAILURE); //g_error
 			}
 			vec.push_back(word);
 			ss >> word;
@@ -80,12 +80,12 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 		std::stringstream blockStream;
 		if (buf != "server"){ // maybe keywords before first "server {"
 			std::cerr << "conf file erreur: no 'server' keyword \n";
-			exit(EXIT_FAILURE);
+			exit(EXIT_FAILURE); // g_error
 		}
 		ss >> buf;
 		if (buf != "{"){
 			std::cerr << "conf file erreur: no '{' after 'server' \n";
-			exit(EXIT_FAILURE);
+			exit(EXIT_FAILURE); // g_error
 		}
 		else if (buf == "{"){
 			ss >> buf;
@@ -106,7 +106,7 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 				ss.str("");
 				blockStream.str("");
 				std::cerr << "conf file erreur, end wihtout '}' \n";
-				exit(EXIT_FAILURE);
+				exit(EXIT_FAILURE); //g_error
 			}
 		}
 		ss >> buf;
@@ -123,7 +123,7 @@ static std::string tolowerstr(std::string str){
 	return ans;
 }
 
-//TODO : parse plusieurs line
+//TODO: parse plusieurs line
 static Request parseFields(std::stringstream & header_buf, Request & request) {
 	std::string word;
 	std::string line;
@@ -131,7 +131,7 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	std::vector<std::string> values;
 	std::map<std::string, void (Request::*)(std::vector<std::string> &)> fields;
 
-	std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
+	//std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
 	fields["host"] = &Request::setHost;
 	fields["user-agent"] = NULL;
 
@@ -153,38 +153,26 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	fields["referer"] = NULL;
 
 	std::getline(header_buf, line);//pour clear la "premiere ligne"
-//	std::cout << "1st line = " << line << std::endl;
 	while (std::getline(header_buf, line) && line != "\r")//tant que pas fin header_buff
 	{
-//		std::cout << "line = " << line << std::endl;
-		//std::cout << "line size = " << line.length() << ": " << (int)line[0] << std::endl;
+		//std::cout << "line = " << (int)line[0] << std::endl;
 		if(line.find(":") == std::string::npos)// si un : else erreur
-		{
-			std::cerr << "Bad request: syntax error ':' not found" << std::endl;
-			exit(EXIT_FAILURE);//TODO gestion erreur BAD REQUEST
-		}
+			return (request.errorMsg(BAD_REQUEST, "syntax error ':' not found"));
 		std::stringstream ss;
 		ss << line;
 		ss >> key; // on met le premier mot dans key
 		key = tolowerstr(key);//insensible a la casse
 		if (key[key.length() - 1] != ':') // key doit toujours se terminer par ':'
-		{
-			std::cerr << "Bad request: syntax error key must be followed by ':'" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			return request.errorMsg(BAD_REQUEST, "syntax error key must be followed by ':'");
 		key = key.substr(0, key.length() - 1);
 		if (fields.count(key) <= 0)//si la clef nextiste pas dans map
-		{
-			std::cerr << "error: request: unknow keyword '" << key << "'" << std::endl;
-			exit(EXIT_FAILURE);//TODO gestion erreur BAD REQUEST
-		}
+			return (request.errorMsg(BAD_REQUEST, std::string("unknow keyword '" + key + "'").c_str()));
 		while(!ss.eof() && ss >> word)// tant que pas fin ligne on ajoute les mot dans la vector value
 			values.push_back(word);
-
 		if (fields[key])
 			(request.*(fields[key]))(values);
 	}
-	std::cout << request << std::endl;	// debug curr request
+//	std::cout << request << std::endl;	// debug curr request
 	return request;
 }
 			/*
@@ -230,7 +218,6 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	}
 	return (request);
 }
-
 */
 
 Request parseRequest(char *requestMsg){
@@ -241,25 +228,19 @@ Request parseRequest(char *requestMsg){
 	ss << requestMsg;
 	std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
 	ss >> buf;
-	if (buf != "POST" && buf != "GET" && buf != "DELETE"){
-		std::cerr << "unknown method\n";
-		exit(EXIT_FAILURE); // return msg to client
-	}
-	else
-		request.setMethod(buf);
+	if (buf != "POST" && buf != "GET" && buf != "DELETE")
+		return (request.errorMsg(BAD_REQUEST, std::string("unknow method '" + buf + "'").c_str()));
+	request.setMethod(buf);
 	ss >> buf;
 	// path: file to add with root => [root]/[index]
 	if (buf[0] != '/') // path must start with /
-		exit(EXIT_FAILURE); // return msg to client
-	else
-		request.setPath(buf);
+		return (request.errorMsg(BAD_REQUEST, "path must start with '/'"));
+	request.setPath(buf);
 	ss >> buf;
 	if (buf != "HTTP/1.1") // protocol version
-		exit(EXIT_FAILURE); // return msg to client
- 	else
-		request.setProtocolVersion(buf);
-	parseFields(ss, request); // ss curseur sur la 2 eme ligne
-	return request;
+		return (request.errorMsg(BAD_REQUEST, "protocol version not supported, only HTTP/1.1 works"));
+	request.setProtocolVersion(buf);
+	return parseFields(ss, request); // ss curseur sur la 2 eme ligne
 }
 
 } // namespace Parser

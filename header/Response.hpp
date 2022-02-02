@@ -16,6 +16,7 @@ class Response {
 		Response &operator=(Response const& rhs);
 
 		std::string prepareResponse(Request & request, std::vector<Conf> &confs);
+		std::string errorFillResponse(std::string code);
 
 	private:
 		// Header

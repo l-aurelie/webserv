@@ -84,3 +84,56 @@ Content-Encoding: gzip
 	<h1>Welcome on agautier.fr</h1>
 </body>
 </html>
+
+Reponse DELETE ================================================================:
+
+DELETE /del/ HTTP/1.1
+Host: agautier.fr
+
+HTTP/1.1 204 No Content
+Server: nginx/1.18.0
+Date: Tue, 01 Feb 2022 09:59:38 GMT
+Connection: keep-alive
+
+DELETE a folder containing a file without perms ===================================
+DELETE /del HTTP/1.1
+Host: agautier.fr
+
+HTTP/1.1 409 Conflict
+Server: nginx/1.18.0
+Date: Tue, 01 Feb 2022 11:34:22 GMT
+Content-Type: text/html
+Content-Length: 151
+Connection: keep-alive
+
+<html>
+<head><title>409 Conflict</title></head>
+<body>
+<center><h1>409 Conflict</h1></center>
+<hr><center>nginx/1.18.0</center>
+</body>
+</html>
+
+POST request ===================================================================
+
+POST / HTTP/2
+Host: marques.pcduo.fr
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:96.0) Gecko/20100101 Firefox/96.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 202
+Origin: https://marques.pcduo.fr
+Connection: keep-alive
+Referer: https://marques.pcduo.fr/add
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+Pragma: no-cache
+Cache-Control: no-cache
+TE: trailers
+
+title=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&info=&allergens=&unitPrice=&unitUnity=&lotPrice=&lotUnity=&add=added

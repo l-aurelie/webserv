@@ -16,16 +16,17 @@ class Server
 		void launch();
 
 		int getSocket() const;
+		std::vector<Conf> getConfs() const;
 
 		Server& operator=(Server const& rhs);
-		std::vector<Conf> confs;	// TODO: passer en private
-	
+
 	private:
 		Server();
 		
 		int	socketServer;
 		std::vector<struct pollfd> fds;
 		std::map<int, std::string> msg_to_client;
+		std::vector<Conf> confs;
 
 		void acceptClient();
 		void answerRequest(std::vector<struct pollfd>::iterator);

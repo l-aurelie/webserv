@@ -27,9 +27,11 @@ Server&	Server::operator=(Server const& rhs) {
 	return (*this);
 }
 
-int Server::getSocket(void) const {
-	return this->socketServer;
-}
+int Server::getSocket() const { return (this->socketServer); }
+std::vector<Conf> Server::getConfs() const { return (this->confs); }
+
+//================================================================//
+
 
 int Server::initServ(int port) {
 	std::cout << "New server on " << confs[0].getListen() << std::endl;
@@ -51,11 +53,11 @@ int Server::initServ(int port) {
 		close(this->socketServer);
 		return (false);
 	}
-	if (listen(this->socketServer, 5) == -1)
+	if (listen(this->socketServer, 5) == -1)	// TODO: 5 ?
 	{
 		std::cerr << "listen socketServer issue\n";
 		close(this->socketServer);
-		exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);// g_error ? 
 	}
 
 	struct pollfd pfd;
@@ -66,6 +68,7 @@ int Server::initServ(int port) {
 	return (true);
 }
 
+/* AJOUTER UN NOUVEAU CLIENT A L ATTRIBUT FDS VECTOR<POLLFD> FDS*/
 void Server::acceptClient(void) {
 	struct pollfd pfd;
 	struct sockaddr_in addrClient;
@@ -78,39 +81,29 @@ void Server::acceptClient(void) {
 	std::cout << "New client " << pfd.fd << " arrived" << std::endl;
 }
 
+/* RECOIT LA REQUETE CLIENT DANS BUFF, LA PARSE DANS UN OBJET REQUEST, PREPARE LA REPONSE A L'AIDE D'UN OBJET RESPONSE, LA PLACE DANS LA STRING MESSAGE_TO_CLIENT CORRESPONDANT AU FD CLIENT */
 void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
-	char buf[4096 + 1];//TODO recuperer taille standard doc RFC
+	char buf[4096 + 1];//TODO: recuperer taille standard doc RFC
 	int read = recv(it->fd, buf, 4096, 0);
-	if (read == -1)
+	if (read == -1) // g_error
 		std::cerr << "error recv" << std::endl;
 	buf[read] = '\0';
 	std::cout << "--------\n";
 	std::cout << "Client " << it->fd << " says: \n" << buf;
 	std::cout << "--------\n";
 	Request resquest = Parser::parseRequest(buf);
-	// formuler la reponse dans un string/char* ?
 	Response response;
 	msg_to_client[it->fd] = response.prepareResponse(resquest, confs); //toutes les confs d'un port
-
-
-	//msg_to_client[it->fd] = "HTTP/1.1 400 Bad Request\n"; // enregistre msg a repondre au client
-	//msg_to_client[it->fd] = "hell\n";
-	//	msg_to_client[it->fd] = "HTTP/1.1 200 OK\nServer: nginx/1.18.0\nDate: Mon, 31 Jan 2022 09:51:11 GMT\nContent-Type: text/html\nContent-Length: 131\nLast-Modified: Wed, 15 Dec 2021 22:37:06 GMT\nConnection: close\n\n<!DOCTYPE html>\n<html>\n<head>\n<title>agautier.fr</title>\n</head>\n<body>\n<h1>Welcome on agautier.fr</h1>\n</body>\n</html>\n\n";
-
-	//msg_to_client[it->fd] = "HTTP/1.1 400 Bad Request\nContent-Type: text/html\nContent-Length: 122\n\n<html>\n<head><title>400 Bad Request</title></head>\n<body>\n<center><h1>400 Bad Request</h1></center>\n</body>\n</html>\n";
-
-	//msg_to_client[it->fd] = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 131\n\n<!DOCTYPE html>\n<html>\n<head>\n<title>agautier.fr</title>\n</head>\n<body>\n<h1>Welcome on agautier.fr</h1>\n</body>\n</html>\n\n";
-
-	//msg_to_client[it->fd] = "HTTP/1.1 400 Bad Request\n\n";
-	//msg_to_client[it->fd] = "HTTP/1.1 200 OK\n\n";
 }
 
+/* ENVOIE LA REPONSE CONTENUE DANS LA STRING MESSAGE_TO_CLIENT AU CLIENT */
 void Server::answerRequest(std::vector<struct pollfd>::iterator it) {
 	std::cout << "Response: " << msg_to_client[it->fd] << std::endl;
 	if (send(it->fd, msg_to_client[it->fd].c_str(), msg_to_client[it->fd].length(), 0) <= 0)
-		std::cerr << "send error \n";
+		std::cerr << "send error \n"; // g_error ? 
 	msg_to_client.erase(it->fd);	// optional if endConnection
 }
+
 
 void Server::endConnection(std::vector<struct pollfd>::iterator it)
 {
@@ -122,6 +115,7 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 
 void Server::launch(void)
 {
+	/* ACCEPTE NOUVEAUX CLIENTS */
 	if (poll(&fds[0], fds.size(), 0) != -1) // TODO: add timeout ?
 	{
 		if (fds[0].revents & POLLIN)

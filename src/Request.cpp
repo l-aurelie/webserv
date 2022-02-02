@@ -17,6 +17,7 @@ Request& Request::operator=(Request const& rhs) {
 	this->protocolVersion = rhs.protocolVersion;
 	this->serverName = rhs.serverName;
 	this->port = rhs.port;
+	this->statusCode = rhs.statusCode;
 	return (*this);
 }
 
@@ -28,6 +29,8 @@ std::ostream & operator<<(std::ostream & os, Request const& rhs) {
 
 	if (rhs.getServerName().length())
 		os << "\tHost: " << rhs.getServerName() << ":" << rhs.getPort() << std::endl;
+
+//	os << "\tstatus: " << rhs.errorMsg() << std::endl;
 	return (os);
 }
 /* Setter */
@@ -36,7 +39,6 @@ void Request::setMethod(std::string method) { this->method = method; }
 void Request::setPath(std::string path) { this->path = path; }
 void Request::setProtocolVersion(std::string protocolVersion) { this->protocolVersion = protocolVersion; }
 void Request::setHost(std::vector<std::string> & values) {
-	std::cout << "Setter Host called" << std::endl;
 	if (values.size() != 1)
 	{
 		std::cerr << "error: request : 'host' accepts only one host" << std::endl;
@@ -69,8 +71,15 @@ void Request::setHost(std::vector<std::string> & values) {
 
 /* Getter */
 
-inline std::string Request::getMethod() const { return (this->method); }
-inline std::string Request::getPath() const { return (this->path); }
-inline std::string Request::getProtocolVersion() const { return (this->protocolVersion); }
-inline std::string Request::getServerName() const { return (this->serverName); }
-inline uint16_t Request::getPort() const { return (this->port); }
+std::string Request::getMethod() const { return (this->method); }
+std::string Request::getPath() const { return (this->path); }
+std::string Request::getProtocolVersion() const { return (this->protocolVersion); }
+std::string Request::getServerName() const { return (this->serverName); }
+uint16_t Request::getPort() const { return (this->port); }
+std::string Request::getStatusCode() const { return this->statusCode; }
+
+Request & Request::errorMsg(std::string statusCode, const char * err_msg){
+	this->statusCode = statusCode;
+	std::cerr << "error: request: " << err_msg << std::endl;
+	return (*this);
+}

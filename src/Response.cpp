@@ -1,4 +1,5 @@
 #include "Conf.hpp"
+#include "Request.hpp"
 #include "Response.hpp"
 #include <cstring>
 #include <cstdlib>
@@ -27,7 +28,38 @@ bool Response::selectConf(std::vector<Conf> & confs, Request & request, Conf & r
 	return (false);
 }
 
+std::string Response::errorFillResponse(std::string code)
+{
+	std::string path;
+	std::stringstream ss;
+	ss << "./error_pages/" << code;
+	ss >> path;
+	path += ".html";
+	ss.str("");
+	ss.clear();
+
+	std::cout << "path = " << path << std::endl;
+	std::ifstream f(path.c_str());
+	ss << f.rdbuf();
+	body = ss.str();
+	std::cout << "body = " << body << std::endl;
+	ss.str("");
+	ss.clear();
+	statusCode = code;
+	fillHeader();
+
+	ss << this->protocolVersion << ' ' << this->statusCode << '\n'; // status line
+	ss << "Server: " << this->server << '\n';
+	ss << "Content-Length: " << this->contentLength << '\n';
+	ss << "Content-Type: " << this->contentType << '\n';
+	ss << '\n';
+	ss << this->body;
+	return (ss.str());
+}
+
 std::string Response::prepareResponse(Request & request, std::vector<Conf> & confs){
+	if (!request.getStatusCode().empty())
+		return (errorFillResponse(request.getStatusCode()));
 	std::stringstream ss;
 	Conf conf;
 	if (!selectConf(confs, request, conf))
@@ -36,6 +68,8 @@ std::string Response::prepareResponse(Request & request, std::vector<Conf> & con
 		exit(EXIT_FAILURE);
 	}
 	fillBody(request, conf);
+	if (statusCode != "200 OK")
+		return (errorFillResponse(statusCode));
 	fillHeader();
 
 	ss << this->protocolVersion << ' ' << this->statusCode << '\n'; // status line
@@ -61,6 +95,7 @@ Response &Response::operator=(Response const& rhs) {
 	this->statusCode = rhs.statusCode;
 	this->contentLength = rhs.contentLength;
 	this->contentType = rhs.contentType;
+	this->body = rhs.body;
 	// TODO:
 
 	return (*this);

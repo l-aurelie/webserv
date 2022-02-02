@@ -59,6 +59,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 - [ ] impossible de supprimer un dossier
 - [ ] 409 Conflict when rm a folder that contains a file without perms
 - [ ] Test delete on browser
+- [ ] SEGV when both instance of webserv launch
 
 ## Doc
 

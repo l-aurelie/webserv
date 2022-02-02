@@ -10,16 +10,18 @@
 #include <string>
 
 int	main(int argc, char **argv) {
+	/* GESTION ARGS (file conf) */
 	if (argc > 2)
 	{
 		std::cerr << "Usage ./webserv [path_to_config_file]" << std::endl;
-		return (EXIT_FAILURE);
+		return (EXIT_FAILURE);// g_error: exit
 	}
 
 	std::string path = "./conf/default.conf";
 	if(argc == 2)
 		path = argv[1];
 
+	/* PARSE CONFIGURATION dans map confs 1port =  1vecteur de Conf */
 	std::map< uint16_t, std::vector<Conf> > confs = Parser::parseConf(path);
 
 	std::vector<Server> servers;
@@ -27,15 +29,15 @@ int	main(int argc, char **argv) {
 		Server server(it->second);
 		servers.push_back(server);
 	}
+
+	/* LANCE UN SERVER POUR CHAQUE PORT */
 	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
-		it->initServ(it->confs[0].getListen());
+		it->initServ(it->getConfs()[0].getListen());
 
 	while (true)
-	{
 		for(std::vector<Server>::iterator it = servers.begin(); it != servers.end(); it++)
 			it->launch();
-	}
-	return (EXIT_SUCCESS);
+	return (EXIT_SUCCESS); // g_error
 
 	/*
 	PRINT ALL MAP
