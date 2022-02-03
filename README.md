@@ -24,6 +24,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] realloue notre tableau si le nombre de client max est atteind
 	- [x] repondre aux messages des clients
 	- [x] utiliser les fichiers de conf
+	- [x] parse content-length
 	- [ ] revoir la maniere dont le client se deconnecte (deconnexion entre 2 requetes a partir du navigateur)
 - [ ] Parsing des fichiers de conf
 	- [x] Prendre chemin en argument
@@ -33,33 +34,35 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] Recuperer le host
 	- [x] Serveur utilise le host du fichier de conf
 	- [x] Decouper le fichier de configuration dans des objets Conf
-	- [ ] gerer le mot clef default_server dans la directive listen
-	- [ ] Checker mauvaises infos du fichier de config
+	- [x] Checker mauvaises infos du fichier de config
+	- [x] client max body size
 	- [ ] Gerer clientbodysize taille (m, g, k)
+	- [ ] possiblity de changer les pages d'error
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes
 	- [x] create d'objet Request
-	- [ ] gerer les field-values multiligne
+	- [x] tronquer le body a max_client_body_size
+	- [ ] gerer les header field-values multiligne
 - [ ] creation des reponses du serveur
 	- [x] header
 	- [x] body => aller chercher le fichier correspondant
 	- [x] envoyer au client
 	- [x] DELETE
+	- [x] adapter les status de reponse
+	- [x] adapter les reponses en fonction de la Conf
+	- [ ] default error page
 	- [ ] POST
-	- [ ] adapter les status de reponse----
-	- [ ] default error page----
-	- [ ] adapter les reponses en fonction de la Conf
-	- [ ] body size
+	- [ ] send image
+- [ ] CGI
+- [ ] clean
+	- [ ] deplacer dans utils
 
 ## Fix
 
-- Notre server execute la requete des la premiere ligne envoyee a nc
-- [x] Dans request, Host n'apparait pas si on ne specifie pas le port ex: 'Host: localhost'
-- [x] Si on specifie un port aleatoire, il est ignore et la requete fonctionne
+- [ ] Notre server execute la requete des la premiere ligne envoyee a nc
 - [ ] impossible de supprimer un dossier
 - [ ] 409 Conflict when rm a folder that contains a file without perms
-- [ ] Test delete on browser
-- [ ] SEGV when both instance of webserv launch
+- [ ] how to test DELETE on browser ?
 
 ## Doc
 

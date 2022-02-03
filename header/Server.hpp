@@ -1,9 +1,12 @@
 #pragma once
 
-#include <Conf.hpp>
+#include "Conf.hpp"
+#include "Request.hpp"
 #include <vector>
 #include <map>
 #include <cstring>
+
+#define BUF_SIZE 1024
 
 class Server
 {
@@ -12,7 +15,7 @@ class Server
 		Server(Server const& rhs);
 		~Server();
 
-		int initServ(int port);
+		bool initServ(int port);
 		void launch();
 
 		int getSocket() const;
@@ -25,11 +28,14 @@ class Server
 		
 		int	socketServer;
 		std::vector<struct pollfd> fds;
+		std::map<int, Request> msg_from_client;
 		std::map<int, std::string> msg_to_client;
+
 		std::vector<Conf> confs;
 
 		void acceptClient();
-		void answerRequest(std::vector<struct pollfd>::iterator);
-		void listenRequest(std::vector<struct pollfd>::iterator);
-		void endConnection(std::vector<struct pollfd>::iterator);
+		void answerRequest(int client_id);
+		void listenRequest(int client_id);
+		void endConnection(std::vector<struct pollfd>::iterator it);
+		void findHeaderSizeAndContentLength(std::string const& buf, std::size_t & header_size, std::size_t & content_length) const;
 };

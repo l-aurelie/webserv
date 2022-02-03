@@ -1,2 +1,9 @@
-GET /index.htmla HTTP/1.1
+GET /style.css HTTP/1.1
 Host: localhost:6500
+Content-Length: 54
+
+0123456789
+0123456789
+0123456789
+0123456789
+0123456789

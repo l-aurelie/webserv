@@ -16,10 +16,10 @@ class Response {
 		Response &operator=(Response const& rhs);
 
 		std::string prepareResponse(Request & request, std::vector<Conf> &confs);
-		std::string errorFillResponse(std::string code);
 
 	private:
 		// Header
+		std::string path;
 		std::string protocolVersion;
 		std::string statusCode;
 		std::size_t contentLength;
@@ -29,8 +29,11 @@ class Response {
 		// Body
 		std::string body;
 
-		std::string findFilePath(Request &request, Conf &conf);
-		bool selectConf(std::vector<Conf> &confs, Request &request, Conf & ret) const;
+		void findFilePath(Request &request, Conf const& conf);
 		void fillHeader();
-		void fillBody(Request & request, Conf conf);
+		void fillBody(Request & request, Conf const& conf);
+		std::string format() const;
+		void setContentType();
+		std::string matchingExtensionType(const std::string &extension);
+		std::string errorFillResponse(std::string code);
 };

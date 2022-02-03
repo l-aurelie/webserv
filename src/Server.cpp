@@ -3,6 +3,7 @@
 #include "Request.hpp"
 #include "Parser.hpp"
 #include "Response.hpp"
+#include "Utils.hpp"
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <iostream>
@@ -33,7 +34,7 @@ std::vector<Conf> Server::getConfs() const { return (this->confs); }
 //================================================================//
 
 
-int Server::initServ(int port) {
+bool Server::initServ(int port) {
 	std::cout << "New server on " << confs[0].getListen() << std::endl;
 
 	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
@@ -49,11 +50,10 @@ int Server::initServ(int port) {
 
 	if (bind(this->socketServer, (const struct sockaddr *)&addrServer, sizeof(addrServer)) == -1)
 	{
-		std::cout << "bind socketServer issue\n";
-		close(this->socketServer);
+		std::cout << "bind socketServer issue on port: " << port << std::endl;
 		return (false);
 	}
-	if (listen(this->socketServer, 5) == -1)	// TODO: 5 ?
+	if (listen(this->socketServer, 1024) == -1)	// TODO: 1024 ?
 	{
 		std::cerr << "listen socketServer issue\n";
 		close(this->socketServer);
@@ -68,7 +68,7 @@ int Server::initServ(int port) {
 	return (true);
 }
 
-/* AJOUTER UN NOUVEAU CLIENT A L ATTRIBUT FDS VECTOR<POLLFD> FDS*/
+/* AJOUTER UN NOUVEAU CLIENT A L ATTRIBUT VECTOR<POLLFD> FDS */
 void Server::acceptClient(void) {
 	struct pollfd pfd;
 	struct sockaddr_in addrClient;
@@ -81,42 +81,71 @@ void Server::acceptClient(void) {
 	std::cout << "New client " << pfd.fd << " arrived" << std::endl;
 }
 
-/* RECOIT LA REQUETE CLIENT DANS BUFF, LA PARSE DANS UN OBJET REQUEST, PREPARE LA REPONSE A L'AIDE D'UN OBJET RESPONSE, LA PLACE DANS LA STRING MESSAGE_TO_CLIENT CORRESPONDANT AU FD CLIENT */
-void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
-	char buf[4096 + 1];//TODO: recuperer taille standard doc RFC
-	int read = recv(it->fd, buf, 4096, 0);
-	if (read == -1) // g_error
-		std::cerr << "error recv" << std::endl;
+void Server::listenRequest(int client_id) {
+	Request & req = msg_from_client[client_id];//define pour simplifier
+
+	std::cout << "server listening for client " << client_id << std::endl;
+
+	char buf[BUF_SIZE + 1];
+	int read = recv(client_id, buf, BUF_SIZE, 0);
+	if (read == -1)
+	{
+		std::cerr << "recv error" << std::endl;
+		exit (EXIT_FAILURE);
+	}
 	buf[read] = '\0';
-	std::cout << "--------\n";
-	std::cout << "Client " << it->fd << " says: \n" << buf;
-	std::cout << "--------\n";
-	Request resquest = Parser::parseRequest(buf);
+
+	req.headerSize = Utils::header_is_full(req.buffer);
+	if(!req.headerSize)//le header n'est pas pret a etre parse
+	{
+		req.buffer += buf;
+		buf[0] = '\0';
+		req.headerSize = Utils::header_is_full(req.buffer);
+	}
+	if (req.headerSize) // header full
+	{
+		if (req.getMethod().empty()) //condition pour parser une seule fois
+			req = Parser::parseRequest(req);
+		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
+		if(client_max_body_size && req.buffer.length() > req.headerSize + client_max_body_size)
+			req.statusCode = TOO_LARGE;
+		else if (req.buffer.length() < req.headerSize + req.getContentLength()
+				&& (!client_max_body_size || (req.buffer.length() < req.headerSize + client_max_body_size)))//si on a pas atteint le maxbodysize ou le content length
+			req.buffer += buf;
+		//tronque si trop grand	
+		if (client_max_body_size)
+			req.buffer = req.buffer.substr(0, req.headerSize + client_max_body_size);
+		req.buffer = req.buffer.substr(0, req.headerSize + req.getContentLength());
+	}
+}
+
+void Server::answerRequest(int client_id) {
+//	std::cout << "--------\n";
+//	std::cout << "Client " << client_id << " says: \n"
+//			  << msg_from_client[client_id].buffer;
+//	std::cout << "--------\n";
+
+//	std::cout << "server answering to client " << client_id << std::endl;
+	Request resquest = Parser::parseRequest(msg_from_client[client_id]);
 	Response response;
-	msg_to_client[it->fd] = response.prepareResponse(resquest, confs); //toutes les confs d'un port
-}
-
-/* ENVOIE LA REPONSE CONTENUE DANS LA STRING MESSAGE_TO_CLIENT AU CLIENT */
-void Server::answerRequest(std::vector<struct pollfd>::iterator it) {
-	std::cout << "Response: " << msg_to_client[it->fd] << std::endl;
-	if (send(it->fd, msg_to_client[it->fd].c_str(), msg_to_client[it->fd].length(), 0) <= 0)
+	msg_to_client[client_id] = response.prepareResponse(resquest, this->confs);
+	std::cout << "Response: " << msg_to_client[client_id] << std::endl;
+	if (send(client_id, msg_to_client[client_id].c_str(), msg_to_client[client_id].length(), 0) <= 0)
 		std::cerr << "send error \n"; // g_error ? 
-	msg_to_client.erase(it->fd);	// optional if endConnection
 }
-
 
 void Server::endConnection(std::vector<struct pollfd>::iterator it)
 {
 	std::cout << "client " << it->fd << " connection closed" << std::endl;
 	close(it->fd);
 	msg_to_client.erase(it->fd);
+	msg_from_client.erase(it->fd);
 	fds.erase(it);
 }
 
 void Server::launch(void)
 {
-	/* ACCEPTE NOUVEAUX CLIENTS */
-	if (poll(&fds[0], fds.size(), 0) != -1) // TODO: add timeout ?
+	if (poll(&fds[0], fds.size(), 0) != -1)
 	{
 		if (fds[0].revents & POLLIN)
 		{
@@ -124,22 +153,20 @@ void Server::launch(void)
 			return;
 		}
 
-		for (std::vector<struct pollfd>::iterator it = fds.begin()++; it != fds.end(); it++)
+		for (std::vector<struct pollfd>::iterator it = fds.begin() + 1; it != fds.end(); it++)
 		{
-			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT))) // le client nous envoie un message
+			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT))) /* le client nous envoie un message */
+				listenRequest(it->fd);
+			else if (it->revents == POLLOUT && msg_from_client.count(it->fd)) /* le client est pret a recevoir un message */
 			{
-				listenRequest(it);
-			}
-			else if (it->revents == POLLOUT && msg_to_client.count(it->fd)) // le client est pret a recevoir un message
-			{
-				answerRequest(it);
+				answerRequest(it->fd);
 				endConnection(it);
 				break ;
 			}
-			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // le client se deconnecte
+			else if (it->revents & POLLERR || it->revents & POLLRDHUP) /* le client se deconnecte */
 			{
 				endConnection(it);
-				break;
+				break ;
 			}
 		}
 	}

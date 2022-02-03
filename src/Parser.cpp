@@ -115,7 +115,7 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 	return (confs);
 }
 
-static std::string tolowerstr(std::string str){
+std::string tolowerstr(std::string str){
 	std::string ans;
 	for (size_t i = 0; i < str.length(); i++){
 		ans.append(1, tolower(str[i]));
@@ -128,11 +128,11 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	std::string word;
 	std::string line;
 	std::string key;
-	std::vector<std::string> values;
 	std::map<std::string, void (Request::*)(std::vector<std::string> &)> fields;
 
 	//std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
 	fields["host"] = &Request::setHost;
+	fields["content-length"] = &Request::setContentLength;
 	fields["user-agent"] = NULL;
 
 	fields["connection"] = NULL;
@@ -153,8 +153,9 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	fields["referer"] = NULL;
 
 	std::getline(header_buf, line);//pour clear la "premiere ligne"
-	while (std::getline(header_buf, line) && line != "\r")//tant que pas fin header_buff
+	while (std::getline(header_buf, line) && line != "\r" && line != "")//tant que pas fin header_buff
 	{
+		std::vector<std::string> values;
 		//std::cout << "line = " << (int)line[0] << std::endl;
 		if(line.find(":") == std::string::npos)// si un : else erreur
 			return (request.errorMsg(BAD_REQUEST, "syntax error ':' not found"));
@@ -220,13 +221,11 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 }
 */
 
-Request parseRequest(char *requestMsg){
-	std::stringstream ss;
+Request parseRequest(Request & request){
+	std::stringstream ss(request.buffer);
 	std::string buf;
-	Request request;
 
-	ss << requestMsg;
-	std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
+	//std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
 	ss >> buf;
 	if (buf != "POST" && buf != "GET" && buf != "DELETE")
 		return (request.errorMsg(BAD_REQUEST, std::string("unknow method '" + buf + "'").c_str()));

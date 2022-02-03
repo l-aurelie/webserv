@@ -32,11 +32,13 @@ int	main(int argc, char **argv) {
 
 	/* LANCE UN SERVER POUR CHAQUE PORT */
 	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
-		it->initServ(it->getConfs()[0].getListen());
+		if (!it->initServ(it->getConfs()[0].getListen()))
+			return (EXIT_FAILURE);
 
 	while (true)
 		for(std::vector<Server>::iterator it = servers.begin(); it != servers.end(); it++)
 			it->launch();
+
 	return (EXIT_SUCCESS); // g_error
 
 	/*

@@ -9,7 +9,8 @@ SRC			=	main.cpp		\
 				Parser.cpp		\
 				Request.cpp		\
 				Response.cpp	\
-				Server.cpp
+				Server.cpp		\
+				Utils.cpp
 
 OBJ			=	$(SRC:%.cpp=$O%.o)
 DEP			=	$(SRC:%.cpp=$D%.d)

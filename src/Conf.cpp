@@ -74,7 +74,7 @@ void Conf::setListen(std::vector<std::string> const& values) {
 	std::stringstream ss;
 	ss << values[0];
 	ss >> this->listen;
-	if (ss.bad() || ss.fail())
+	if (ss.fail())
 	{
 		std::cerr << "error: config file : 'listen' unsigned numeric value required" << std::endl;
 		exit(EXIT_FAILURE);
@@ -125,16 +125,16 @@ void Conf::setClientMaxBodySize(std::vector<std::string> const& values) {	// TOD
 	std::stringstream ss;
 	ss << values[0];
 	ss >> this->clientMaxBodySize;
-	if (ss.bad() || ss.fail())
+	if (ss.fail())
 	{
 		std::cerr << "error: config file : 'max_client_body_size' unsigned numeric value required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 }
 
-inline uint16_t Conf::getListen() const { return (this->listen); }
-inline std::vector<std::string> Conf::getServerName() const { return (this->serverName); }
-inline bool Conf::getAutoindex() const { return (this->autoindex); }
-inline std::vector<std::string> Conf::getIndex() const {return (this->index); }
-inline std::string Conf::getRoot() const { return (this->root); }
-inline int Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }
+uint16_t Conf::getListen() const { return (this->listen); }
+std::vector<std::string> Conf::getServerName() const { return (this->serverName); }
+bool Conf::getAutoindex() const { return (this->autoindex); }
+std::vector<std::string> Conf::getIndex() const {return (this->index); }
+std::string Conf::getRoot() const { return (this->root); }
+std::size_t Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }

@@ -26,7 +26,7 @@ class Conf
 		bool getAutoindex() const;
 		std::vector<std::string> getIndex() const;
 		std::string getRoot() const;
-		int getClientMaxBodySize() const;
+		std::size_t getClientMaxBodySize() const;
 
 	private:
 		uint16_t listen;
@@ -34,7 +34,7 @@ class Conf
 		bool autoindex;
 		std::vector<std::string> index;
 		std::string root;
-		size_t clientMaxBodySize;
+		std::size_t clientMaxBodySize;
 };
 
 std::ostream & operator<<(std::ostream & os, Conf const& rhs);
