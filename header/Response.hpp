@@ -20,20 +20,24 @@ class Response {
 	private:
 		// Header
 		std::string path;
+		std::string queryString;
 		std::string protocolVersion;
 		std::string statusCode;
 		std::size_t contentLength;
 		std::string contentType;
 		std::string server;
-
-		// Body
 		std::string body;
 
-		void findFilePath(Request &request, Conf const& conf);
+		void constructPath(Request &request, Conf const& conf);
 		void fillHeader();
 		void fillBody(Request & request, Conf const& conf);
 		std::string format() const;
 		void setContentType();
 		std::string matchingExtensionType(const std::string &extension);
 		std::string errorFillResponse(std::string code);
+		
+		void deleteFile(Request &request, Conf const &conf);
+		void getFile(Request & request, Conf const& conf);
+		std::string launchCGI(Request &request);
+
 };

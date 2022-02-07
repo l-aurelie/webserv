@@ -4,10 +4,6 @@
 #include <string>
 #include <vector>
 
-#define BAD_REQUEST "400 Bad Request"
-#define NOT_FOUND "404 Not Found"
-#define TOO_LARGE "413 Request Entity Too Large"
-
 class Request
 {
 	public:
@@ -23,7 +19,9 @@ class Request
 		std::string getServerName() const;
 		uint16_t getPort() const;
 		std::size_t getContentLength() const;
+		std::string getBody() const;
 
+		void setBody();
 		void setMethod(std::string method);
 		void setPath(std::string path);
 		void setProtocolVersion(std::string protocolVersion);
@@ -33,6 +31,7 @@ class Request
 		Request & errorMsg(std::string statusCode, const char * err_msg);
 
 		std::string buffer;
+		std::string body;
 		std::string statusCode;
 		std::size_t headerSize;
 

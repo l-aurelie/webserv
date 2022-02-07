@@ -1,9 +1,12 @@
+#include "cgi.hpp"
 #include "Conf.hpp"
 #include "Server.hpp"
 #include "Request.hpp"
 #include "Parser.hpp"
 #include "Response.hpp"
 #include "Utils.hpp"
+#include "webserv.hpp"
+
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <iostream>
@@ -81,6 +84,7 @@ void Server::acceptClient(void) {
 	std::cout << "New client " << pfd.fd << " arrived" << std::endl;
 }
 
+/*  */
 void Server::listenRequest(int client_id) {
 	Request & req = msg_from_client[client_id];//define pour simplifier
 
@@ -112,7 +116,7 @@ void Server::listenRequest(int client_id) {
 		else if (req.buffer.length() < req.headerSize + req.getContentLength()
 				&& (!client_max_body_size || (req.buffer.length() < req.headerSize + client_max_body_size)))//si on a pas atteint le maxbodysize ou le content length
 			req.buffer += buf;
-		//tronque si trop grand	
+		//tronque si trop grand
 		if (client_max_body_size)
 			req.buffer = req.buffer.substr(0, req.headerSize + client_max_body_size);
 		req.buffer = req.buffer.substr(0, req.headerSize + req.getContentLength());
@@ -120,15 +124,25 @@ void Server::listenRequest(int client_id) {
 }
 
 void Server::answerRequest(int client_id) {
-//	std::cout << "--------\n";
-//	std::cout << "Client " << client_id << " says: \n"
-//			  << msg_from_client[client_id].buffer;
-//	std::cout << "--------\n";
+	//	std::cout << "--------\n";
+	//	std::cout << "Client " << client_id << " says: \n"
+	//			  << msg_from_client[client_id].buffer;
+	//	std::cout << "--------\n";
 
-//	std::cout << "server answering to client " << client_id << std::endl;
-	Request resquest = Parser::parseRequest(msg_from_client[client_id]);
+	//	std::cout << "server answering to client " << client_id << std::endl;
+	//Request resquest = Parser::parseRequest(msg_from_client[client_id]);// TODO: deja fait dans listen ??
 	Response response;
-	msg_to_client[client_id] = response.prepareResponse(resquest, this->confs);
+	// SI request.extension == extension CGI
+	//if (msg_from_client[client_id].getPath() == "/phpinfo.php")
+	//	msg_to_client[client_id] = launchCGI(msg_from_client[client_id]);
+	//msg_to_client[client_id] = response.prepareCGI(msg_from_client[client_id], this->confs);
+	// SINON
+	//else
+	std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
+	msg_to_client[client_id] = response.prepareResponse(msg_from_client[client_id], this->confs);
+	
+	//	msg_to_client[client_id] = std::string("HTTP/1.1 301 Moved Permanently\nServer: nginx/1.18.0\nDate: Fri, 04 Feb 2022 11:28:19 GMT\nContent-Type: text/html\nContent-Length: 169\nConnection: keep-alive\nLocation: https://google.com/"); // TODO: test redirections
+	
 	std::cout << "Response: " << msg_to_client[client_id] << std::endl;
 	if (send(client_id, msg_to_client[client_id].c_str(), msg_to_client[client_id].length(), 0) <= 0)
 		std::cerr << "send error \n"; // g_error ? 
@@ -147,7 +161,7 @@ void Server::launch(void)
 {
 	if (poll(&fds[0], fds.size(), 0) != -1)
 	{
-		if (fds[0].revents & POLLIN)
+		if (fds[0].revents & POLLIN)/* Un client se connecte */
 		{
 			this->acceptClient();
 			return;

@@ -3,6 +3,21 @@ server ecoute sur le port 80
 aurelie.localhost communique
 antoine.localhost communique
 
+	error_page 400 /var/www/aurelie/monerreur400.html;
+	error_page 400 /home/aurelie/Documents/webserv/error_pages/404.html;
+	method-allowed: POST GET DELETE;
+
+	location /index.html {
+		redirection http://google.com/poisson.html;	(REPONSE 301) 
+	}
+
+	location /cgi-bin/ {
+		method-allowed: POST GET;
+		root /home/aurelie/Documents/webserv/cgi-bin/;
+		index index.cgi;
+		client_max_body_size 8192;
+	}
+
 server {
 	listen 8808;
 	server_name localhost antoine.localhost;

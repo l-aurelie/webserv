@@ -1,5 +1,7 @@
 #include "Parser.hpp"
 #include "Request.hpp"
+#include "webserv.hpp"
+
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -133,7 +135,10 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	//std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
 	fields["host"] = &Request::setHost;
 	fields["content-length"] = &Request::setContentLength;
+	fields["content-type"] = NULL;
 	fields["user-agent"] = NULL;
+
+	fields["origin"] = NULL;
 
 	fields["connection"] = NULL;
 	fields["pragma"] = NULL;
@@ -173,7 +178,7 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 		if (fields[key])
 			(request.*(fields[key]))(values);
 	}
-//	std::cout << request << std::endl;	// debug curr request
+	request.setBody();//TODO: replacer dans parse request ?
 	return request;
 }
 			/*
@@ -225,6 +230,7 @@ Request parseRequest(Request & request){
 	std::stringstream ss(request.buffer);
 	std::string buf;
 
+	std::cout << "Calling parseRequest();" << '\n';
 	//std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
 	ss >> buf;
 	if (buf != "POST" && buf != "GET" && buf != "DELETE")

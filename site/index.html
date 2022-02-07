@@ -7,12 +7,16 @@
 <body>
 	<h1>Hello Webserv</h1>
 	<p>Bonjour toto</p>
-	<form action="" method="POST">
-		<input type="text" name="path" />
-		<button type="submit" name="send" value="send">SEND</button>
-		<img src="/img.jpeg" alt="image" id="pouassont"/>
+	<form action="phpinfo.php" method="GET">
+		<input type="text" name="text" />
+		<button type="submit" name="send" value="send">SEND GET</button>
+	</form>
+	<form action="phpinfo.php" method="POST">
+		<input type="text" name="text" />
+		<button type="submit" name="send" value="send">CHRONOPOST</button>
 	</form>
 	<div>
+		<img src="/img.jpeg" alt="image" id="pouassont"/>
 		<button id="coucou">COUCOU</button>
 	</div>
 	<script src="main.js"></script>

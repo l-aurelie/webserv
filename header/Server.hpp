@@ -6,8 +6,6 @@
 #include <map>
 #include <cstring>
 
-#define BUF_SIZE 1024
-
 class Server
 {
 	public:

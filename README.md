@@ -26,6 +26,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] utiliser les fichiers de conf
 	- [x] parse content-length
 	- [ ] revoir la maniere dont le client se deconnecte (deconnexion entre 2 requetes a partir du navigateur)
+	- [ ] deconnecter le client si read/recv return 0 OR -1
 - [ ] Parsing des fichiers de conf
 	- [x] Prendre chemin en argument
 	- [x] Chemin par defaut
@@ -38,6 +39,10 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] client max body size
 	- [ ] Gerer clientbodysize taille (m, g, k)
 	- [ ] possiblity de changer les pages d'error
+	- [ ] faire des HTTP redirection 301 + header Location: URL
+	- [ ] autoindex on/off
+	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
+	- [ ] location block
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes
 	- [x] create d'objet Request
@@ -53,9 +58,23 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [ ] default error page
 	- [ ] POST
 	- [ ] send image
+	- [ ] utiliser autoindex
 - [ ] CGI
+	- [x] C'est quoi ?
+	- [x] Faire requete GET dans le terminal
+	- [X] Faire requete POST dans le terminal
+	- [X] Faire fonctionner GET dans webserv
+	- [x] Faire fonctionner POST dans webserv
+	- [ ] Faire fonctionner CGI dynamiquement dans webserv
+		- [x] POST body
+		- [ ] POST Header (Content-type est duplique, a parser dans le body retourne par php-cgi ?)
+		- [ ] GET body
+		- [ ] GET Header
+	- [ ] unchunck request
 - [ ] clean
 	- [ ] deplacer dans utils
+
+- [ ] proteger les fichiers elementaires
 
 ## Fix
 
@@ -69,6 +88,14 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 - [socket](https://www.youtube.com/watch?v=s3o5tixMFho)
 - [select/poll/epoll](https://www.youtube.com/watch?v=dEHZb9JsmOU)
 - [webserv](https://webserv42.notion.site/webserv42/Webserv-cbb6ab4136ba4b4c8cb4f98109d5fc1f)
+
+### CGI
+
+[https://www.tutorialspoint.com/cplusplus/cpp_web_programming.htm](https://www.tutorialspoint.com/cplusplus/cpp_web_programming.htm)
+[http://www.wijata.com/cgi/cgispec.html](http://www.wijata.com/cgi/cgispec.html#4.0)
+[https://www.ibm.com/docs/ko/netcoolomnibus/8.1?topic=scripts-environment-variables-in-cgi-script](https://www.ibm.com/docs/ko/netcoolomnibus/8.1?topic=scripts-environment-variables-in-cgi-script)
+[http://www.cgi101.com/book/ch3/text.html](http://www.cgi101.com/book/ch3/text.html)
+https://fr.wikipedia.org/wiki/Variables_d%27environnement_CGI
 
 ## Subject
 

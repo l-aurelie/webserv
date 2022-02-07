@@ -102,6 +102,11 @@ std::string Request::getProtocolVersion() const { return (this->protocolVersion)
 std::string Request::getServerName() const { return (this->serverName); }
 uint16_t Request::getPort() const { return (this->port); }
 std::size_t Request::getContentLength() const { return (this->contentLength); }
+std::string Request::getBody() const { return (this->body); }
+
+void	Request::setBody(){
+	body = buffer.substr(headerSize);
+}
 
 Request & Request::errorMsg(std::string statusCode, const char * err_msg){
 	this->statusCode = statusCode;
