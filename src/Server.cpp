@@ -1,4 +1,3 @@
-#include "cgi.hpp"
 #include "Conf.hpp"
 #include "Server.hpp"
 #include "Request.hpp"
@@ -16,6 +15,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
+
+std::string launchCGI(); // TODO: remove
+
 
 Server::Server(std::vector<Conf> confs) : confs(confs) {}
 Server::Server(Server const& rhs) { *this = rhs; }
@@ -36,15 +38,15 @@ std::vector<Conf> Server::getConfs() const { return (this->confs); }
 
 //================================================================//
 
-
+/* CREATION SOCKET SERVER, BIND, MISE EN ECOUTE AJOUT SOCKETSERV COMME PREMIER ELEMENT DU VECT<POLLFD>*/
 bool Server::initServ(int port) {
 	std::cout << "New server on " << confs[0].getListen() << std::endl;
 
 	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
 
-	int	enable = 1;
-	if (setsockopt(this->socketServer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
-		std::cerr << "setsockopt(SO_REUSEADDR) failed" << std::endl;
+//	int	enable = 1;
+//	if (setsockopt(this->socketServer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
+//		std::cerr << "setsockopt(SO_REUSEADDR) failed" << std::endl;
 
 	struct sockaddr_in addrServer;
 	addrServer.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -60,9 +62,9 @@ bool Server::initServ(int port) {
 	{
 		std::cerr << "listen socketServer issue\n";
 		close(this->socketServer);
-		exit(EXIT_FAILURE);// g_error ? 
+		exit(EXIT_FAILURE);
 	}
-
+	/* Ajoute le socketserver comme premier element a lattribut vector<pollfd> fds */
 	struct pollfd pfd;
 	pfd.fd = getSocket();
 	pfd.events = POLLIN;
@@ -84,12 +86,12 @@ void Server::acceptClient(void) {
 	std::cout << "New client " << pfd.fd << " arrived" << std::endl;
 }
 
-/*  */
+/* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN : SON MESSAGE N'EST PAS TERMINE. ON CONTINUE DE RECV ET DE CONCATENER AVEC NOTRE STRING (attribut de requete presente dans la map msg_from_client). LA TAILLE MAXIMUM (maxBodySize/contentLength) EST PRISE EN COMPTE */
 void Server::listenRequest(int client_id) {
 	Request & req = msg_from_client[client_id];//define pour simplifier
 
 	std::cout << "server listening for client " << client_id << std::endl;
-
+	/* On  lit dans buf ce que le client nous envoie */
 	char buf[BUF_SIZE + 1];
 	int read = recv(client_id, buf, BUF_SIZE, 0);
 	if (read == -1)
@@ -99,6 +101,7 @@ void Server::listenRequest(int client_id) {
 	}
 	buf[read] = '\0';
 
+	/* Tant que le header n'est pas complet on ajoute buf a notre string de requete */
 	req.headerSize = Utils::header_is_full(req.buffer);
 	if(!req.headerSize)//le header n'est pas pret a etre parse
 	{
@@ -106,48 +109,46 @@ void Server::listenRequest(int client_id) {
 		buf[0] = '\0';
 		req.headerSize = Utils::header_is_full(req.buffer);
 	}
+
+	/* Le header est complet on parse le  header de la requete */
 	if (req.headerSize) // header full
 	{
 		if (req.getMethod().empty()) //condition pour parser une seule fois
 			req = Parser::parseRequest(req);
 		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
+
+		/* On ajoute buf a notre string de requete tant qu'on a pas atteint content length ou maxbody */
 		if(client_max_body_size && req.buffer.length() > req.headerSize + client_max_body_size)
 			req.statusCode = TOO_LARGE;
 		else if (req.buffer.length() < req.headerSize + req.getContentLength()
 				&& (!client_max_body_size || (req.buffer.length() < req.headerSize + client_max_body_size)))//si on a pas atteint le maxbodysize ou le content length
 			req.buffer += buf;
-		//tronque si trop grand
+
+		/* Si besoin tronque la string a la taille exacte */
 		if (client_max_body_size)
 			req.buffer = req.buffer.substr(0, req.headerSize + client_max_body_size);
 		req.buffer = req.buffer.substr(0, req.headerSize + req.getContentLength());
+		req.setBody();
 	}
 }
 
+/*  ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse : poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */ 
 void Server::answerRequest(int client_id) {
-	//	std::cout << "--------\n";
-	//	std::cout << "Client " << client_id << " says: \n"
-	//			  << msg_from_client[client_id].buffer;
-	//	std::cout << "--------\n";
-
-	//	std::cout << "server answering to client " << client_id << std::endl;
-	//Request resquest = Parser::parseRequest(msg_from_client[client_id]);// TODO: deja fait dans listen ??
 	Response response;
-	// SI request.extension == extension CGI
-	//if (msg_from_client[client_id].getPath() == "/phpinfo.php")
-	//	msg_to_client[client_id] = launchCGI(msg_from_client[client_id]);
-	//msg_to_client[client_id] = response.prepareCGI(msg_from_client[client_id], this->confs);
-	// SINON
-	//else
+	/* Prepare la reponse */
+	std::cout << "Request buf = |" << std::endl << msg_from_client[client_id].buffer << "|\n";
 	std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
 	msg_to_client[client_id] = response.prepareResponse(msg_from_client[client_id], this->confs);
 	
 	//	msg_to_client[client_id] = std::string("HTTP/1.1 301 Moved Permanently\nServer: nginx/1.18.0\nDate: Fri, 04 Feb 2022 11:28:19 GMT\nContent-Type: text/html\nContent-Length: 169\nConnection: keep-alive\nLocation: https://google.com/"); // TODO: test redirections
 	
+	/* Envoie la reponse au client */
 	std::cout << "Response: " << msg_to_client[client_id] << std::endl;
 	if (send(client_id, msg_to_client[client_id].c_str(), msg_to_client[client_id].length(), 0) <= 0)
 		std::cerr << "send error \n"; // g_error ? 
 }
 
+/* GERE DECONNECTION, CLOSE FD, SUPPRIME REQUETE ET REPONSE CORRESPONDANTE */
 void Server::endConnection(std::vector<struct pollfd>::iterator it)
 {
 	std::cout << "client " << it->fd << " connection closed" << std::endl;
@@ -157,27 +158,41 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 	fds.erase(it);
 }
 
+/* 1 SERVER ECOUTE LES DEMANDES DE CONNECTION, LES REQUETES ET ENVOIE LES REPONSE AU PREVIOUS REQUETES*/
 void Server::launch(void)
 {
+	std::cout << "acceded in Server::launch\n";
+//	Request re;
+	launchCGI();
+	exit(12);
+	/*
+	 */
+
 	if (poll(&fds[0], fds.size(), 0) != -1)
 	{
-		if (fds[0].revents & POLLIN)/* Un client se connecte */
+		/* Un client se connecte */
+		if (fds[0].revents & POLLIN)
 		{
 			this->acceptClient();
 			return;
 		}
 
 		for (std::vector<struct pollfd>::iterator it = fds.begin() + 1; it != fds.end(); it++)
-		{
-			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT))) /* le client nous envoie un message */
+		{ 
+			/* le client nous envoie un message */
+			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
 				listenRequest(it->fd);
-			else if (it->revents == POLLOUT && msg_from_client.count(it->fd)) /* le client est pret a recevoir un message */
+
+			/* le client est pret a recevoir un message */
+			else if (it->revents == POLLOUT && msg_from_client.count(it->fd))
 			{
 				answerRequest(it->fd);
 				endConnection(it);
 				break ;
 			}
-			else if (it->revents & POLLERR || it->revents & POLLRDHUP) /* le client se deconnecte */
+			
+			/* le client se deconnecte */
+			else if (it->revents & POLLERR || it->revents & POLLRDHUP)
 			{
 				endConnection(it);
 				break ;

@@ -178,7 +178,6 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 		if (fields[key])
 			(request.*(fields[key]))(values);
 	}
-	request.setBody();//TODO: replacer dans parse request ?
 	return request;
 }
 			/*

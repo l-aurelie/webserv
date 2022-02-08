@@ -26,6 +26,7 @@ class Response {
 		std::size_t contentLength;
 		std::string contentType;
 		std::string server;
+
 		std::string body;
 
 		void constructPath(Request &request, Conf const& conf);
@@ -38,6 +39,6 @@ class Response {
 		
 		void deleteFile(Request &request, Conf const &conf);
 		void getFile(Request & request, Conf const& conf);
-		std::string launchCGI(Request &request);
+		//std::string launchCGI(Request &request);
 
 };

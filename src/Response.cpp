@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <vector>
 
+std::string launchCGI(); // TODO: remove
+
 Response::Response() {} // TODO:
 Response::Response(Response const &rhs) { *this = rhs; }
 Response::~Response() {}
@@ -37,9 +39,10 @@ Response &Response::operator=(Response const &rhs)
 
 //================================================================================//
 
-/*  SI NECESSAIRE RECHERCHE LE BON INDEX, REMPLI L'ATTRIBUT PATH ET VERIFIE LES ERREUR(existe, permission), PATH SET A EMPTY SI ERREURS */
+/*  SI NECESSAIRE RECHERCHE LE BON INDEX, REMPLI L'ATTRIBUT PATH ET VERIFIE LES ERREURS(existe, permission), PATH SET A EMPTY SI ERREURS */
 void Response::constructPath(Request &request, Conf const &conf)
 {
+	std::cerr << "constructPath() called" << std::endl;
 	struct stat infos;
 
 	/* decoupe la queryString dans le path */
@@ -81,17 +84,17 @@ void Response::constructPath(Request &request, Conf const &conf)
 	}
 }
 
-/* EN FONCTION DU STATUS CODE REMPLI LE BODY AVEC LA PAGE D'ERREUR CORRESPONDANTE, REMPLI LE HEADER ET RENVOI LA REPONSE FORMATEE EN STRING */
+/* PREPARE LA REPONSE POUR LES CAS D'ERREUR (REMPLI LE BODY AVEC LA PAGE D'ERREUR CORRESPONDANTE au status code,  rempli le header) LA RENVOIE FORMATEE EN STRING */
 std::string Response::errorFillResponse(std::string code)
 {
+	std::cerr << "errorFillResponse() called" << std::endl;
 	// TODO: autres statuts d'erreur?
-	std::string path;
 	std::stringstream ss;
 	// TODO:
 	// si dans la conf j'ai error_page 403 PATH
 	//	on utilise PATH
 	// Sinon on calcule le path
-	ss << "./error_pages/" << code;
+	ss << "./error_pages/" << code;	// TODO: dynamic path
 	ss >> path;
 	path += ".html";
 	ss.str("");
@@ -100,11 +103,8 @@ std::string Response::errorFillResponse(std::string code)
 	std::ifstream f(path.c_str());
 	ss << f.rdbuf();
 	body = ss.str();
-	ss.str("");
-	ss.clear();
 	statusCode = code;
 	fillHeader();
-
 	return (format());
 }
 
@@ -126,12 +126,10 @@ std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs
 /* SET ATTRIBUT CONTENT TYPE EN FONCTION EXTENSION DU PATH */
 void Response::setContentType()
 {
-	if (path.empty())
-	{
-		contentType = "";
-		// TODO: return ?
-	}
+	if (!contentType.empty())
+		return ;
 
+	std::cerr << "This is path in setContentType(): " << path << std::endl;
 	std::string extension = path.substr(path.rfind(".") + 1);
 
 	std::ifstream mime_types("./conf/mime.types");
@@ -153,8 +151,10 @@ void Response::setContentType()
 	contentType = type;
 }
 
+/* REMPLI LE HEADER */
 void Response::fillHeader()
 {
+	std::cerr << "fillHeader() called" << std::endl;
 	protocolVersion = "HTTP/1.1";
 	server = "webserv";
 
@@ -162,6 +162,8 @@ void Response::fillHeader()
 	contentLength = body.length();
 	// TODO: autres champs de header ?
 }
+
+/* METHODE DELETE  SI LES DROITS LE PERMETTENT SUPPRIME LE FICHIER. SET LE STATUSCODE */
 void Response::deleteFile(Request &request, Conf const &conf)
 {
 	struct stat infos;
@@ -180,24 +182,35 @@ void Response::deleteFile(Request &request, Conf const &conf)
 	// else if (infos.st_mode & S_IFDIR)
 	// else (408 Conflict) // dossier droit r mais pas droit r dans sous dossier
 	//{}
+
 	/* Supprime le fichier */
 	remove(path.c_str());
 	statusCode = NO_CONTENT;
 }
 
+/* REMPLI LE BODY SELON LA METHODE GET */
 void Response::getFile(Request &request, Conf const &conf)
 {
 	/* Recupere le path */
+	std::cerr << "getFile() called" << std::endl;
 	constructPath(request, conf);
 	if (path.empty())
 		return;
+
+	/* Le fichier demande est un CGI */
 	//if (path.substr(path.substr(0, path.find("?")).rfind(".")) == ".php")
+	
 	if (path.substr(path.rfind(".")) == ".php")
 	{
-		launchCGI(request);
+		std::cout << "cgi in get " << std::endl;
+		//body = launchCGI(request);
+		body = launchCGI();
 	}
+
+	/* Le fichier n'est pas un CGI */
 	else
 	{
+		std::cerr << "not cgi in GET" << std::endl;
 		/* Ouvre le fichier et rempli le body */
 		std::ifstream ifs(path.c_str());
 		std::stringstream buf;
@@ -221,7 +234,7 @@ void Response::fillBody(Request &request, Conf const &conf)
 	else if (request.getMethod() == "POST")
 	{
 		constructPath(request, conf);
-		body = launchCGI(request);
+		//body = launchCGI(request);// TODO: disable comment
 		// TODO: POST
 	}
 }
@@ -240,156 +253,366 @@ std::string Response::format() const
 	return ss.str();
 }
 
+int error(std::string error)
+{
+	std::cerr << error << std::endl;
+	return(EXIT_FAILURE);
+}
+/*
 std::string Response::launchCGI(Request & request)
 {
 	std::stringstream ss;
-	std::string response;
-	int fds_in[2];
+	std::string budy;
+	//int fds_in[2];
+	(void)request;	// TODO: remove
 	int fds_out[2];
 
-	if (pipe(fds_out) == -1)
-	{
-		std::cerr << "error: pipe syscall failed" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+	if (pipe(fds_out) == -1) // OUVERTURE PIPE_OUT ====
+		exit(error("error: pipe syscall failed"));
 
-	/* Rempli les arguments passes a exec */
+// Rempli les arguments passes a exec
 	std::vector<const char *>args;
-
 	std::cerr << "At begining of launchCGI, path is: " << path << std::endl;
 	std::string tmp = path.substr(0, path.rfind("/")) + "../cgi/php-cgi";
-//	std::cerr << "exec is " << (path.substr(0, path.rfind("/")) + "../cgi/php-cgi") << std::endl;
-	args.push_back(tmp.c_str());	// TODO:
-	args.push_back(path.c_str());
+	//std::cerr << "exec is " << (path.substr(0, path.rfind("/")) + "../cgi/php-cgi") << std::endl;
+//	args.push_back(tmp.c_str());	// TODO:
+//	args.push_back(path.c_str());
+	args.push_back("/home/aurelie/Documents/webserv/cgi/php-cgi");
+	args.push_back("/home/aurelie/Documents/webserv/site/phpinfo.php");
 	args.push_back(NULL);
-	/* Rempli les meta var */
-	std::vector<const char *>env;
-
+	args.push_back("../cgi/php-cgi");
+	args.push_back("./phpinfo.php");
+	args.push_back(NULL);
+	
+// Rempli les meta var
+	std::vector<const char*> env;
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env.push_back("REDIRECT_STATUS=true");
+	env.push_back("SCRIPT_FILENAME=./phpinfo.php");
+	env.push_back("REQUEST_METHOD=GET");
+	env.push_back("QUERY_STRING=toto=6&send=send");
+	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	env.push_back("REDIRECT_STATUS=true");
+	env.push_back("SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site/phpinfo.php");
 
-	std::string script_filename = (std::string("SCRIPT_FILENAME=") + path);
-	env.push_back(script_filename.c_str());
+	//std::string script_filename = (std::string("SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site///phpinfo.php");
+//	std::string script_filename = (std::string("SCRIPT_FILENAME=") + path);
+	//env.push_back(script_filename.c_str());
 
-	std::string request_method = (std::string("REQUEST_METHOD=") + request.getMethod());
-	env.push_back(request_method.c_str());
+	//std::string request_method = (std::string("REQUEST_METHOD=GET"));
+//	std::string request_method = (std::string("REQUEST_METHOD=") + request.getMethod());
+	//env.push_back(request_method.c_str());
 
-	std::string query_string = (std::string("QUERY_STRING=") + queryString);
-	env.push_back(query_string.c_str());
+	//std::string query_string = (std::string("QUERY_STRING=") + queryString);
+	//std::string query_string = (std::string("QUERY_STRING=\"name=toto\""));
+	//env.push_back(query_string.c_str());
 
+	env.push_back("REQUEST_METHOD=GET");
+	env.push_back("QUERY_STRING=toto=6&send=send");
+//	env.push_back(NULL);
 	std::string content_length;
+// meta var post
+POST
 	if (request.getMethod() == "POST")
 	{
 		env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
 		ss << "CONTENT_LENGTH=" << request.getBody().length();
 		content_length = ss.str();
 		if (ss.fail())
-		{
 			std::cerr << "Cannot convert body length" << std::endl;	// TODO:
-		}
 		std::cerr << "content len debug: " << content_length << '\n';
 		env.push_back(content_length.c_str());
 
-		/* Passer le body en entree standard du cgi */
-		if (pipe(fds_in) == -1)
-		{
-			std::cerr << "error: pipe syscall failed" << std::endl;
-			exit(EXIT_FAILURE);	// TODO: set status code
-		}
+// Passe le body en entree standard du cgi 
+		if (pipe(fds_in) == -1)// OUVERTURE PIPE IN ====
+			exit(error("error: pipe syscall failed"));	// TODO: set status code
+
 		std::cerr << "body sent to stdin is : " << request.getBody().c_str() << std::endl;
 		std::cerr << "body len to stdin is : " << request.getBody().length() << std::endl;
+
 		if (write(fds_in[1], request.getBody().c_str(), request.getBody().length()) == -1) // TODO: != verif nombre de char ecrits ?
-		{
-			std::cerr << "error: write syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: write syscall failed"));
 		if (close(fds_in[1]) == -1)
-		{
-			std::cerr << "error: close syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: close syscall failed"));
 	}
 	env.push_back(NULL);
 
 	pid_t pid = fork();
 	if (pid == -1)
-	{
-		std::cerr << "error: fork syscall failed" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+		exit(error("error: fork syscall failed"));
 	else if (pid == 0)
 	{
+		POST
 		if (request.getMethod() == "POST" && dup2(fds_in[0], STDIN_FILENO) == -1)
-		{
-			std::cerr << "error: dup2 syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: dup2 syscall failed"));
 		if (close(fds_out[0]) == -1)
-		{
-			std::cerr << "error: close syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-		if (request.getMethod() == "POST" && dup2(fds_out[1], STDOUT_FILENO) == -1)
-		{
-			std::cerr << "error: dup2 syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-		if (chdir("./site/") == -1) // TODO: path ? //chdir(dans root/path - phpinfo.php);
-		{
-			std::cerr << "error: chdir syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-		// root/dir/file
-		std::cerr << "exec name: " << *args.begin() << std::endl;
-		std::cerr << "args 1: " << *(args.begin() + 1) << std::endl;
+			exit(error("error: close syscall failed"));
+		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
+			exit(error("error: dup2 syscall failed"));
+		if (chdir("./site/") == -1) // TODO: path ? //chdir(root/path - phpinfo.php);
+			exit(error("error: chdir syscall failed"));
 
-		const char ** toto = &(*env.begin());
+		const char ** toto = &(*args.begin());
+		while (toto && *toto)
+		{
+			std::cerr << "args = " << *toto << std::endl;
+			toto++;
+		}
+		std::cerr << "==============" << std::endl;
+		toto = &(*env.begin());
 		while (toto && *toto)
 		{
 			std::cerr << "env = " << *toto << std::endl;
 			toto++;
 		}
-		
-		execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin()));
-		std::cerr << "error: execve syscall failed" << std::endl;
-		exit(EXIT_FAILURE);
+
+// Exec php-cgi  
+		std::cerr << "execve(" << *args.begin() << ", " << (*args.begin()) << ", " << (*env.begin()) << ")" << std::endl;
+		if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
+			exit(error("error: execve syscall failed"));
 	}
 	else
 	{
 		if (wait(NULL) == -1)
-		{
-			std::cerr << "error: wait syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: wait syscall failed"));
+		std::cerr << "execve ended" << std::endl;
+		
 		if (close(fds_out[1]) == -1)
-		{
-			std::cerr << "error: close syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: close syscall failed"));
+		POST
 		if (request.getMethod() == "POST" && close(fds_in[0]) == -1)
-		{
-			std::cerr << "error: close syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: close syscall failed"));
 
-		/* Recupere le retour du cgi comme reponse : TODO a formatter */
+// Recupere le retour du cgi comme reponse : TODO a formatter
+
 		char buf2[BUF_SIZE + 1];
 		ssize_t bytes_read;
 		while ((bytes_read = read(fds_out[0], buf2, BUF_SIZE)) > 0)
 		{
 			buf2[bytes_read] = '\0';
-			response += buf2;
+			budy += buf2;
 		}
 		if (bytes_read == -1)
-		{
-			std::cerr << "error: read syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: read syscall failed"));
+		budy = "Content-type: text/html; charset=UTF-8\r\n\r\n<h1>call to phpinfo.php\r\n</h1><pre>GET = array(2) {\r\n[\"toto\"]=>\r\nstring(1) \"6\"\r\n[\"send\"]=>\r\nstring(4) \"send\"\r\n}\r\nPOST = array(0) {\r\n}\r\n</pre><p>0 Hello World!<br />\r\n1 Hello World!<br />\r\n2 Hello World!<br />\r\n3 Hello World!<br />\r\n4 Hello World!<br />\r\n</p>";
 		if (close(fds_out[0]) == -1)
-		{
-			std::cerr << "error: close syscall failed" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			exit(error("error: close syscall failed"));
 	}
-	return (response);
+	contentType = budy.substr(budy.find(": ") + 2, std::string::npos);
+	contentType = contentType.substr(0, contentType.find("\n"));
+	budy = budy.substr(budy.find("\n") + 1);	// enlever la ligne content-type
+	budy = budy.substr(budy.find("\n") + 1);	// enlever la ligne vide
+	std::cout << "--------\n";
+	std::cout << "contenttype in CGI: " << contentType << '\n';
+	std::cout << "body in CGI: " << budy << '\n';
+	std::cout << "--------\n";
+	return (budy);
+}
+*/
+
+std::string launchCGI()
+{
+//	(void)request;
+	std::cout << "debut launchCGI cout" << std::endl;
+	std::string path("/home/aurelie/Documents/webserv/site///phpinfo.php");
+
+	std::cout << "to hello: " << std::endl;
+	std::stringstream ss;
+	std::cout << "to hello1: " << std::endl;
+	std::string budy;
+	std::cout << "to hello2: " << std::endl;
+	int fds_out[2];
+
+	std::cout << "to hell: " << std::endl;
+	if (pipe(fds_out) == -1) // OUVERTURE PIPE_OUT ====
+		exit(error("error: pipe syscall failed"));
+
+/* Rempli les arguments passes a exec */
+	std::vector<const char *>args;
+	std::cout << "At begining of launchCGI, path is: " << path << std::endl;
+	std::string tmp = path.substr(0, path.rfind("/")) + "../cgi/php-cgi";
+	//std::cout << "exec is " << (path.substr(0, path.rfind("/")) + "../cgi/php-cgi") << std::endl;
+	//args.push_back(tmp.c_str());	// TODO:
+	//args.push_back(path.c_str());
+	std::cout << "to hello3: " << std::endl;
+	args.push_back("../cgi/php-cgi");
+	args.push_back("./phpinfo.php");
+	args.push_back(NULL);
+	
+	std::cout << "to hello4: " << std::endl;
+/* Rempli les meta var */
+	std::vector<const char *>env;
+	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	env.push_back("REDIRECT_STATUS=true");
+	env.push_back("SCRIPT_FILENAME=./phpinfo.php");
+	std::cout << "to hello5: " << std::endl;
+
+	//std::string script_filename = (std::string("SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site///phpinfo.php");
+//	std::string script_filename = (std::string("SCRIPT_FILENAME=") + path);
+	//env.push_back(script_filename.c_str());
+
+	//std::string request_method = (std::string("REQUEST_METHOD=GET"));
+//	std::string request_method = (std::string("REQUEST_METHOD=") + request.getMethod());
+	//env.push_back(request_method.c_str());
+
+	//std::string query_string = (std::string("QUERY_STRING=") + queryString);
+	//std::string query_string = (std::string("QUERY_STRING=\"name=toto\""));
+	//env.push_back(query_string.c_str());
+
+	env.push_back("REQUEST_METHOD=GET");
+	env.push_back("QUERY_STRING=toto=6&send=send");
+	std::string content_length;
+/* meta var post */
+	
+	env.push_back(NULL);
+
+	std::cout << "to hello6: " << std::endl;
+	pid_t pid = fork();
+	if (pid == -1)
+		exit(error("error: fork syscall failed"));
+	else if (pid == 0)
+	{
+
+		std::cout << "to hello7: " << std::endl;
+		if (close(fds_out[0]) == -1)
+			exit(error("error: close syscall failed"));
+//		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
+//			exit(error("error: dup2 syscall failed"));
+		if (chdir("./site/") == -1) // TODO: path ? //chdir(root/path - phpinfo.php);
+			exit(error("error: chdir syscall failed"));
+		// root/dir/file
+
+		std::cout << "==============" << std::endl;
+		const char ** toto = &(*args.begin());
+		while (toto && *toto)
+		{
+			std::cout << "args = " << *toto << std::endl;
+			toto++;
+		}
+		std::cout << "==============" << std::endl;
+		toto = &(*env.begin());
+		while (toto && *toto)
+		{
+			std::cout << "env = " << *toto << std::endl;
+			toto++;
+		}
+		std::cout << "==============" << std::endl;
+		char **cmds;
+		cmds = (char**)malloc(sizeof(char*) * 3);
+		*(cmds + 2) = 0;
+		char exec[] = "/home/aurelie/Documents/webserv/cgi/php-cgi";
+		char file[] = "/home/aurelie/Documents/webserv/site/phpinfo.php";
+		//for (int i = 0; i < 3; i++) cmds[i] = calloc(1,1);
+		cmds[0] = strdup(exec);
+		cmds[1] = strdup(file);
+		char **genvp;
+		char env0[] = "REDIRECT_STATUS=true";
+		char env1[] = "REQUEST_METHOD=GET";
+		char env2[] = 	"QUERY_STRING=prenom=antoine&nom=gautier";
+		char env3[] = 	"SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site/phpinfo.php";
+		char env4[] = 	"GATEWAY_INTERFACE=CGI/1.1";
+		genvp = (char**)malloc(sizeof(char*) * 6);
+		*(genvp + 5) = 0;
+		genvp[0] = strdup(env0);
+		genvp[1] = strdup(env1);
+		genvp[2] = strdup(env2);
+		genvp[3] = strdup(env3);
+		genvp[4] = strdup(env4);
+		//for (int i = 0; i < 6; i++) genvp[i] = calloc(1,1);
+/*
+*/
+/* Exec php-cgi */ 
+		//std::cout << "execve(" << *args.begin() << ", " << (*(args.begin() + 1)) << ", " << (*env.begin()) << ")" << std::endl;
+
+		const char* argt[] = {
+			"/home/aurelie/Documents/webserv/cgi/php-cgi",
+			"/home/aurelie/Documents/webserv/site/phpinfo.php",
+			NULL
+		};
+		/*
+		const char * envt[] = {
+			"GATEWAY_INTERFACE=CGI/1.1",
+			"REDIRECT_STATUS=true",
+			"SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site///phpinfo.php",
+			"REQUEST_METHOD=GET",
+			"QUERY_STRING=toto=6&send=send",
+			NULL,
+		};
+		const char* envt[] = {
+			"REDIRECT_STATUS=true",
+			"REQUEST_METHOD=GET",
+			"QUERY_STRING=prenom=antoine&nom=gautier",
+			"SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site/phpinfo.php",
+			"GATEWAY_INTERFACE=CGI/1.1",
+			NULL
+		};
+		*/
+
+//		char * const* parg = (char * const*)calloc(sizeof(const char *), 3);
+//		parg[0] = "/home/aurelie/Documents/webserv/cgi/php-cgi";
+//		parg[1] = "/home/aurelie/Documents/webserv/site/phpinfo.php";
+//		parg[2] = NULL;
+//
+//		char * const* penv = (char * const *)calloc(sizeof(const char *), 7);
+//		penv[0] = "REDIRECT_STATUS=true";
+//		penv[1] = "REQUEST_METHOD=GET";
+//		penv[2] = "QUERY_STRING=prenom=antoine&nom=gautier";
+//		penv[3] = "SCRIPT_FILENAME=/home/aurelie/Documents/webserv/site/phpinfo.php";
+//		penv[4] = "GATEWAY_INTERFACE=CGI/1.1";
+//		penv[5] = NULL;
+
+		std::cout << "execve(" << argt[0] << ", " << argt[0] << ", " << argt[1] << ", " << (*env.begin()) << ")" << std::endl;
+//		(void)envt;
+//		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
+	//		exit(error("error: dup2 syscall failed"));
+        if (execve(cmds[0], cmds, genvp) == -1)
+        //if (execve(argt[0], (char * const*)argt, (char * const*)envt) == -1)
+        //if (execve(argt[0], (char* const*)argt, (char* const*)envt) == -1)
+       // if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
+			exit(error("error: execve syscall failed"));
+	}
+	else
+	{
+		if (wait(NULL) == -1)
+			exit(error("error: wait syscall failed"));
+		std::cout << "execve ended" << std::endl;
+		
+		if (close(fds_out[1]) == -1)
+			exit(error("error: close syscall failed"));
+
+/* Recupere le retour du cgi comme reponse : TODO a formatter */
+		char buf2[BUF_SIZE + 1];
+		ssize_t bytes_read;
+		while ((bytes_read = read(fds_out[0], buf2, BUF_SIZE)) > 0)
+		{
+			buf2[bytes_read] = '\0';
+			budy += buf2;
+		}
+		if (bytes_read == -1)
+			exit(error("error: read syscall failed"));
+  /*
+		budy = "Content-type: text/html; charset=UTF-8\r\n\r\n<h1>call to phpinfo.php\r\n</h1><pre>GET = array(2) {\r\n[\"toto\"]=>\r\nstring(1) \"6\"\r\n[\"send\"]=>\r\nstring(4) \"send\"\r\n}\r\nPOST = array(0) {\r\n}\r\n</pre><p>0 Hello World!<br />\r\n1 Hello World!<br />\r\n2 Hello World!<br />\r\n3 Hello World!<br />\r\n4 Hello World!<br />\r\n</p>";
+		*/
+		if (close(fds_out[0]) == -1)
+			exit(error("error: close syscall failed"));
+
+		std::cout << "================" << std::endl;
+		std::cout << "budy is |\n" << budy << "|\n";
+		std::cout << "================" << std::endl;
+
+		/*
+		std::string contentType = budy.substr(budy.find(": ") + 2, std::string::npos);
+		contentType = contentType.substr(0, contentType.find("\n"));
+		budy = budy.substr(budy.find("\n") + 1);	// enlever la ligne content-type
+		budy = budy.substr(budy.find("\n") + 1);	// enlever la ligne vide
+
+		std::cout << "--------\n";
+		std::cout << "contenttype in CGI: " << contentType << '\n';
+		std::cout << "body in CGI: " << budy << '\n';
+		std::cout << "--------\n";
+		*/
+
+		std::cout << "RETURN IS " << budy << std::endl;
+	}
+	return (budy);
 }

@@ -67,7 +67,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] Faire fonctionner POST dans webserv
 	- [ ] Faire fonctionner CGI dynamiquement dans webserv
 		- [x] POST body
-		- [ ] POST Header (Content-type est duplique, a parser dans le body retourne par php-cgi ?)
+		- [x] POST Header (Content-type est duplique, a parser dans le body retourne par php-cgi ?)
 		- [ ] GET body
 		- [ ] GET Header
 	- [ ] unchunck request
