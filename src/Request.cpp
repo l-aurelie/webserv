@@ -113,3 +113,4 @@ Request & Request::errorMsg(std::string statusCode, const char * err_msg){
 	std::cerr << "error: request: " << err_msg << std::endl;
 	return (*this);
 }
+

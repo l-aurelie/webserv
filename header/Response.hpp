@@ -39,6 +39,6 @@ class Response {
 		
 		void deleteFile(Request &request, Conf const &conf);
 		void getFile(Request & request, Conf const& conf);
-		//std::string launchCGI(Request &request);
+		void launchCGI(Request &request);
 
 };

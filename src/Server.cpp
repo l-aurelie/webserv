@@ -18,7 +18,6 @@
 
 std::string launchCGI(); // TODO: remove
 
-
 Server::Server(std::vector<Conf> confs) : confs(confs) {}
 Server::Server(Server const& rhs) { *this = rhs; }
 Server::~Server(void) { close(this->socketServer); }
@@ -44,9 +43,9 @@ bool Server::initServ(int port) {
 
 	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
 
-//	int	enable = 1;
-//	if (setsockopt(this->socketServer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
-//		std::cerr << "setsockopt(SO_REUSEADDR) failed" << std::endl;
+	int	enable = 1;
+	if (setsockopt(this->socketServer, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
+		std::cerr << "setsockopt(SO_REUSEADDR) failed" << std::endl;
 
 	struct sockaddr_in addrServer;
 	addrServer.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -80,7 +79,8 @@ void Server::acceptClient(void) {
 	socklen_t csize = sizeof(addrClient);
 
 	pfd.fd = accept(this->socketServer, (struct sockaddr *)&addrClient, &csize);
-	pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR;
+	//pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
+	pfd.events = POLLIN | POLLOUT | POLLERR;
 	fds.push_back(pfd);
 
 	std::cout << "New client " << pfd.fd << " arrived" << std::endl;
@@ -161,12 +161,9 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 /* 1 SERVER ECOUTE LES DEMANDES DE CONNECTION, LES REQUETES ET ENVOIE LES REPONSE AU PREVIOUS REQUETES*/
 void Server::launch(void)
 {
-	std::cout << "acceded in Server::launch\n";
-//	Request re;
-	launchCGI();
-	exit(12);
-	/*
-	 */
+//	std::cout << "acceded in Server::launch\n";
+//	launchCGI();
+//	exit(12);
 
 	if (poll(&fds[0], fds.size(), 0) != -1)
 	{
@@ -192,7 +189,8 @@ void Server::launch(void)
 			}
 			
 			/* le client se deconnecte */
-			else if (it->revents & POLLERR || it->revents & POLLRDHUP)
+			//else if (it->revents & POLLERR || it->revents & POLLRDHUP)
+			else if (it->revents & POLLERR)
 			{
 				endConnection(it);
 				break ;

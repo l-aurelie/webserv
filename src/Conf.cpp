@@ -138,3 +138,4 @@ bool Conf::getAutoindex() const { return (this->autoindex); }
 std::vector<std::string> Conf::getIndex() const {return (this->index); }
 std::string Conf::getRoot() const { return (this->root); }
 std::size_t Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }
+

@@ -37,3 +37,4 @@ class Server
 		void endConnection(std::vector<struct pollfd>::iterator it);
 		void findHeaderSizeAndContentLength(std::string const& buf, std::size_t & header_size, std::size_t & content_length) const;
 };
+

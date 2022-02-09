@@ -10,8 +10,6 @@
 #include <string>
 #include <unistd.h>
 
-std::string launchCGI(); // TODO: remove
-
 int	main(int argc, char **argv) {
 	/* GESTION ARGS (file conf) */
 	if (argc > 2)
@@ -33,7 +31,6 @@ int	main(int argc, char **argv) {
 		servers.push_back(server);
 	}
 
-
 	/* LANCE UN SERVER POUR CHAQUE PORT */
 	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
 	{
@@ -42,20 +39,14 @@ int	main(int argc, char **argv) {
 			std::cerr << "initServ failed" << std::endl;
 			return (EXIT_FAILURE);
 		}
-	launchCGI();
-	exit(12);
 	}
-
-
 
 	/* Chacun leur tour les server ecoutent les connections et les requetes */
 	while (true)
 	{
 		for(std::vector<Server>::iterator it = servers.begin(); it != servers.end(); it++){
 			it->launch();
-			break;
 		}
-		break;
 		usleep(500);
 	}
 	std::cerr << "main ended" << std::endl;

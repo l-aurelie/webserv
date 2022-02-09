@@ -45,3 +45,4 @@ class Request
 };
 
 std::ostream & operator<<(std::ostream & os, Request const& rhs);
+

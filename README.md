@@ -65,11 +65,12 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [X] Faire requete POST dans le terminal
 	- [X] Faire fonctionner GET dans webserv
 	- [x] Faire fonctionner POST dans webserv
-	- [ ] Faire fonctionner CGI dynamiquement dans webserv
+	- [x] Faire fonctionner CGI dynamiquement dans webserv
 		- [x] POST body
 		- [x] POST Header (Content-type est duplique, a parser dans le body retourne par php-cgi ?)
-		- [ ] GET body
-		- [ ] GET Header
+		- [x] GET body
+		- [x] GET Header
+	- [ ] gestion d'erreur dans launchCGI
 	- [ ] unchunck request
 - [ ] clean
 	- [ ] deplacer dans utils
