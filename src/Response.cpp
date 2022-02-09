@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <vector>
 
+
 Response::Response() {} // TODO:
 Response::Response(Response const &rhs) { *this = rhs; }
 Response::~Response() {}
@@ -248,10 +249,10 @@ std::string Response::format() const
 	return ss.str();
 }
 
-int error(std::string error) // TODO : gestion erreur Launch cgi
+void Response::error(std::string const& status_code, std::string const& error)
 {
-	std::cerr << error << std::endl;
-	return(EXIT_FAILURE);
+	std::cerr << "error: (Response) " << error << std::endl;
+	statusCode =  status_code;
 }
 
 void Response::launchCGI(Request & request)
@@ -261,12 +262,11 @@ void Response::launchCGI(Request & request)
 	std::stringstream ss;
 
 	if (pipe(fds_out) == -1) // OUVERTURE PIPE_OUT ====
-		exit(error("error: pipe syscall failed"));
+		return (error(INTERNAL, "pipe syscall failed"));
 
 	//* Rempli les arguments passes a exec
 	std::vector<const char *>args;
-	std::string tmp = path.substr(0, path.rfind("/")) + "../cgi/php-cgi";
-	args.push_back(tmp.c_str());	// TODO:
+	args.push_back(CGI_PATH);	// TODO: guess cgi path if not set ? if already set in system ?
 	args.push_back(path.c_str());
 	args.push_back(NULL);
 	
@@ -289,45 +289,45 @@ void Response::launchCGI(Request & request)
 		ss << "CONTENT_LENGTH=" << request.getBody().length();
 		content_length = ss.str();
 		if (ss.fail())
-			exit(error("Cannot convert body length meta var"));
+			return (error(INTERNAL, "cannot convert body length meta var"));
 		env.push_back(content_length.c_str());
 		env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
 
-		//* Passe le body en entree standard du cgi 
+		//* Passe le body en entree standard du cgi pour envoyer body post (redirige stdin)
 		if (pipe(fds_in) == -1)// OUVERTURE PIPE IN ====
-			exit(error("error: pipe syscall failed"));	// TODO: set status code
-		if (write(fds_in[1], request.getBody().c_str(), request.getBody().length()) == -1) // TODO: != verif nombre de char ecrits ?
-			exit(error("error: write syscall failed"));
+			return (error(INTERNAL, "pipe syscall failed"));
+		if (write(fds_in[1], request.getBody().c_str(), request.getBody().length()) == -1)
+			return (error(INTERNAL, "write syscall failed"));
 		if (close(fds_in[1]) == -1)
-			exit(error("error: close syscall failed"));
+			return (error(INTERNAL, "close syscall failed"));
 	}
 	env.push_back(NULL);
 
+	//* Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi
 	pid_t pid = fork();
 	if (pid == -1)
-		exit(error("error: fork syscall failed"));
+		return (error(INTERNAL, "fork syscall failed"));
 	else if (pid == 0)
 	{
 		if (request.getMethod() == "POST" && dup2(fds_in[0], STDIN_FILENO) == -1)
-			exit(error("error: dup2 syscall failed"));
+			return(error(INTERNAL, "dup2 syscall failed"));
 		if (close(fds_out[0]) == -1)
-			exit(error("error: close syscall failed"));
+			return (error(INTERNAL, "close syscall failed"));
 		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
-			exit(error("error: dup2 syscall failed"));
-		if (chdir("./site/") == -1) // TODO: path ? //chdir(root/path - phpinfo.php);
-			exit(error("error: chdir syscall failed"));
-		//* Exec php-cgi
+			return (error(INTERNAL, "dup2 syscall failed"));
+		if (chdir(path.substr(0, path.rfind("/") - 1).c_str()) == -1)
+			return (error(INTERNAL, "chdir syscall failed"));
 		if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
-			exit(error("error: execve syscall failed"));
+			return (error(INTERNAL, "execve syscall failed"));
 	}
 	else
 	{
 		if (wait(NULL) == -1)
-			exit(error("error: wait syscall failed"));
+			return (error(INTERNAL, "wait syscall failed"));
 		if (close(fds_out[1]) == -1)
-			exit(error("error: close syscall failed"));
+			return (error(INTERNAL, "close syscall failed"));
 		if (request.getMethod() == "POST" && close(fds_in[0]) == -1)
-			exit(error("error: close syscall failed"));
+			return (error(INTERNAL, "close syscall failed"));
 		//* Recupere le retour du cgi comme reponse
 		char buf2[BUF_SIZE + 1];
 		ssize_t bytes_read;
@@ -337,9 +337,9 @@ void Response::launchCGI(Request & request)
 			body += buf2;
 		}
 		if (bytes_read == -1)
-			exit(error("error: read syscall failed"));
+			return (error(INTERNAL, "read syscall failed"));
 		if (close(fds_out[0]) == -1)
-			exit(error("error: close syscall failed"));
+			return (error(INTERNAL, "close syscall failed"));
 	}
 
 	//* Formate reponse cgi

@@ -23,10 +23,12 @@ int	main(int argc, char **argv) {
 		path = argv[1];
 
 	/* PARSE CONFIGURATION dans map confs 1port =  1vecteur de Conf */
-	std::map< uint16_t, std::vector<Conf> > confs = Parser::parseConf(path);
-
+	std::map< uint16_t, std::vector<Conf> > confss = Parser::parseConf(path);
+//	confss = map < PORT, confs>	=> MAIN => MAP< PORT, confs >
+//	confs = vector< Conf > => Toutes les configurations d'un seul PORT
+//	conf = block Server
 	std::vector<Server> servers;
-	for (std::map<uint16_t, std::vector<Conf> >::iterator it = confs.begin(); it != confs.end(); it++){
+	for (std::map<uint16_t, std::vector<Conf> >::iterator it = confss.begin(); it != confss.end(); it++){
 		Server server(it->second);
 		servers.push_back(server);
 	}

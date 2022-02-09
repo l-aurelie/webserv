@@ -37,12 +37,12 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] Decouper le fichier de configuration dans des objets Conf
 	- [x] Checker mauvaises infos du fichier de config
 	- [x] client max body size
+	- [x] location block
 	- [ ] Gerer clientbodysize taille (m, g, k)
 	- [ ] possiblity de changer les pages d'error
 	- [ ] faire des HTTP redirection 301 + header Location: URL
 	- [ ] autoindex on/off
 	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
-	- [ ] location block
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes
 	- [x] create d'objet Request
@@ -70,7 +70,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 		- [x] POST Header (Content-type est duplique, a parser dans le body retourne par php-cgi ?)
 		- [x] GET body
 		- [x] GET Header
-	- [ ] gestion d'erreur dans launchCGI
+	- [x] gestion d'erreur dans launchCGI
 	- [ ] unchunck request
 - [ ] clean
 	- [ ] deplacer dans utils

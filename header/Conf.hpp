@@ -3,6 +3,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <map>
 #include <stdint.h>
 
 class Conf
@@ -27,6 +28,8 @@ class Conf
 		std::vector<std::string> getIndex() const;
 		std::string getRoot() const;
 		std::size_t getClientMaxBodySize() const;
+
+		std::map< std::string, Conf > locations;	//TODO: Private ?
 
 	private:
 		uint16_t listen;

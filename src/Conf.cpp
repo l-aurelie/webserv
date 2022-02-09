@@ -29,7 +29,8 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 	std::vector<std::string> index = rhs.getIndex();
 
 	os << "Server {" << std::endl;
-	os << "\tlisten: " << rhs.getListen() << ";" << std::endl;
+	if (rhs.getListen())
+		os << "\tlisten: " << rhs.getListen() << ";" << std::endl;
 
 	if (serverName.size())
 	{
@@ -138,4 +139,3 @@ bool Conf::getAutoindex() const { return (this->autoindex); }
 std::vector<std::string> Conf::getIndex() const {return (this->index); }
 std::string Conf::getRoot() const { return (this->root); }
 std::size_t Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }
-

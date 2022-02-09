@@ -40,5 +40,6 @@ class Response {
 		void deleteFile(Request &request, Conf const &conf);
 		void getFile(Request & request, Conf const& conf);
 		void launchCGI(Request &request);
+		void error(std::string const & status_code, std::string const & error);
 
 };
