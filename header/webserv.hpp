@@ -11,5 +11,7 @@
 #define NOT_FOUND "404 Not Found"
 #define TOO_LARGE "413 Request Entity Too Large"
 #define INTERNAL "500 Internal Server Error"
+#define MOVED_PERMANENTLY "301 Moved Permanently"
+#define TEMPORARY_REDIRECT "307 Temporary Redirect"
 
 #endif

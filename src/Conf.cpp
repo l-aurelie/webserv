@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <vector>
 
-Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1) { }
+Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) { }
 
 Conf::Conf(Conf const& rhs) { *this = rhs; }
 
@@ -23,6 +23,8 @@ Conf& Conf::operator=(Conf const& rhs) {
 	this->clientMaxBodySize = rhs.clientMaxBodySize;
 	this->locations = rhs.locations;
 	this->locationPath = rhs.locationPath;
+	this->redirectCode = rhs.redirectCode;
+	this->redirectURL = rhs.redirectURL;
 	return (*this);
 }
 
@@ -136,6 +138,34 @@ void Conf::setClientMaxBodySize(std::vector<std::string> const& values) {	// TOD
 		std::cerr << "error: config file : 'max_client_body_size' unsigned numeric value required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+}
+
+void Conf::setReturn(std::vector<std::string> const& values) {
+	if (values.size() != 2)
+	{
+		std::cerr << "error: config file : 'return' need code and URL" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (!std::isdigit(values[0][0]))
+	{
+		std::cerr << "error: config file : 'return' unsigned numeric code required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	std::stringstream ss;
+	ss << values[0];
+	ss >> this->redirectCode;
+	if (ss.fail())
+	{
+		std::cerr << "error: config file : 'return' unsigned numeric code required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (this->redirectCode != 301 && this->redirectCode != 307)
+	{
+		std::cerr << "error: config file : 'return' only 301 and 307 code are implemented" << std::endl;	// TODO: implement other codes
+		exit(EXIT_FAILURE);
+	}
+	this->redirectURL = values[1];
 }
 
 //uint16_t Conf::getListen() const { return (this->listen); }

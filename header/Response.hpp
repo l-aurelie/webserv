@@ -26,11 +26,13 @@ class Response {
 		std::size_t contentLength;
 		std::string contentType;
 		std::string server;
+		std::string location;
 
 		std::string body;
 
 		void constructPath(Request &request, Conf const& conf);
 		void fillHeader();
+		void redirected(int code, std::string const& url);
 		void fillBody(Request & request, Conf const& conf);
 		std::string format() const;
 		void setContentType();

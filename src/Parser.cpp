@@ -35,6 +35,7 @@ static void parseDirectives(std::stringstream & ss, Conf & conf) {
 	directives["index"] = &Conf::setIndex;
 	directives["root"] = &Conf::setRoot;
 	directives["client_max_body_size"] = &Conf::setClientMaxBodySize;
+	directives["return"] = &Conf::setReturn;
 
 	ss >> word;
 	while (!ss.eof())
@@ -72,6 +73,8 @@ void completeConfLocation(Conf & conf)
 		conf.autoindex = 0;
 	if (conf.clientMaxBodySize == -1)
 		conf.clientMaxBodySize = 0;
+	if (conf.redirectCode == -1)
+		conf.redirectCode = 0;
 
 	for (std::map<std::string, Conf>::iterator it = conf.locations.begin(); it != conf.locations.end(); it++)
 	{
@@ -83,6 +86,10 @@ void completeConfLocation(Conf & conf)
 			it->second.root = conf.root;
 		if(it->second.clientMaxBodySize == -1)
 			it->second.clientMaxBodySize = conf.clientMaxBodySize;
+		if(it->second.redirectCode == -1)
+			it->second.redirectCode = conf.redirectCode;
+		if(it->second.redirectURL.empty())
+			it->second.redirectURL = conf.redirectURL;
 	}
 }
 

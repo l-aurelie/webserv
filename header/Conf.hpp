@@ -21,6 +21,7 @@ class Conf
 		void setIndex(std::vector<std::string> const& values);
 		void setRoot(std::vector<std::string> const& values);
 		void setClientMaxBodySize(std::vector<std::string> const& values);
+		void setReturn(std::vector<std::string> const& values);
 
 	//	uint16_t getListen() const;
 	//	std::vector<std::string> getServerName() const;
@@ -36,6 +37,8 @@ class Conf
 		std::string root;
 		int clientMaxBodySize;
 		std::string locationPath;
+		std::string redirectURL;
+		int redirectCode;
 		std::map< std::string, Conf > locations;	//TODO: Private ?
 	private:
 };

@@ -105,16 +105,33 @@ std::string Response::errorFillResponse(std::string code)
 	return (format());
 }
 
+void Response::redirected(int code, std::string const& url)
+{
+	if (code == 301)	// TODO: other redirect codes
+		statusCode = MOVED_PERMANENTLY;
+	else if (code == 307)
+		statusCode = TEMPORARY_REDIRECT;
+	this->location = url;
+}
+
 /* REMPLI LA REPONSE ET LA RENVOIE FORMATEE EN STRING */
 std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs)
 {
 	/* Gere les erreurs presentes en amont */
 	if (!request.statusCode.empty())
 		return (errorFillResponse(request.statusCode));
-	/* Rempli le body */
-	fillBody(request, Utils::selectConf(confs, request.getServerName(), request.getPath()));
-	if (statusCode != "200 OK")
-		return (errorFillResponse(statusCode));
+	/* Selectionne la conf pour la reponse */
+	Conf const& conf = Utils::selectConf(confs, request.getServerName(), request.getPath());
+	/* Gere les redirection */
+	if (conf.redirectCode)
+		redirected(conf.redirectCode, conf.redirectURL);
+	/* Ou rempli le body */
+	else
+	{
+		fillBody(request, conf);
+		if (statusCode != "200 OK")
+			return (errorFillResponse(statusCode));
+	}
 	/* Rempli le header */
 	fillHeader();
 	return (format());
@@ -242,8 +259,11 @@ std::string Response::format() const
 
 	ss << this->protocolVersion << ' ' << this->statusCode << '\n'; // status line
 	ss << "Server: " << this->server << '\n';
-	ss << "Content-Length: " << this->contentLength << '\n';
+	if (this->contentLength)
+		ss << "Content-Length: " << this->contentLength << '\n';
 	ss << "Content-Type: " << this->contentType << '\n';
+	if (!this->location.empty())
+		ss << "Location: " << this->location << '\n';
 	ss << '\n';
 	ss << this->body;
 	return ss.str();
@@ -322,7 +342,7 @@ void Response::launchCGI(Request & request)
 		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
 			return (error(INTERNAL, "dup2 syscall failed"));
 		if (chdir(path.substr(0, path.rfind("/") - 1).c_str()) == -1)
-			return (error(INTERNAL, "chdir syscall failed"));
+			return (error(NOT_FOUND, "chdir syscall failed"));
 		std::cerr << "---before execve---\n";
 		if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
 			return (error(INTERNAL, "execve syscall failed"));
