@@ -43,23 +43,22 @@ void Response::constructPath(Request &request, Conf const &conf)
 {
 	struct stat infos;
 
-
 	//-- decoupe la queryString dans le path
 	queryString = request.getPath().substr(request.getPath().find("?") + 1);
 	path = request.getPath().substr(0, request.getPath().find("?"));
 	if (queryString == path)
 		queryString = "";
-
+	if (conf.locationPath.length())
+		path = std::string("/") + path.substr(conf.locationPath.length());//Supprime le location path
 	//-- le path ne requiert pas de recherche d'index
 	if (path[path.length() - 1] != '/')
-		path = conf.getRoot() + "/" + path;
+		path = conf.root + "/" + path;
 	//-- itere sur les indexes pour trouver le bon path
 	else 
 	{
-		std::vector<std::string> indexes = conf.getIndex();
-		for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); it++)
+		for (std::vector<std::string>::const_iterator it = conf.index.begin(); it != conf.index.end(); it++)
 		{
-			path = conf.getRoot() + "/" + path + *it;
+			path = conf.root + "/" + path + *it;
 			if (stat(path.c_str(), &infos) == -1)
 				path = "";
 			else
@@ -113,7 +112,7 @@ std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs
 	if (!request.statusCode.empty())
 		return (errorFillResponse(request.statusCode));
 	/* Rempli le body */
-	fillBody(request, Utils::selectConf(confs, request.getServerName()));
+	fillBody(request, Utils::selectConf(confs, request.getServerName(), request.getPath()));
 	if (statusCode != "200 OK")
 		return (errorFillResponse(statusCode));
 	/* Rempli le header */
@@ -166,7 +165,7 @@ void Response::deleteFile(Request &request, Conf const &conf)
 {
 	struct stat infos;
 	/* Recupere et verifie le path */
-	std::string path = conf.getRoot() + "/" + request.getPath();
+	std::string path = conf.root + "/" + request.getPath();
 	if (stat(path.c_str(), &infos) == -2)
 	{
 		statusCode = NOT_FOUND;
@@ -202,6 +201,7 @@ void Response::getFile(Request &request, Conf const &conf)
 	{
 		std::cout << "cgi in get " << std::endl;
 		launchCGI(request);
+		std::cerr << "launchCGI() ended" << std::endl;
 	}
 
 	/* Le fichier n'est pas un CGI */
@@ -264,13 +264,13 @@ void Response::launchCGI(Request & request)
 	if (pipe(fds_out) == -1) // OUVERTURE PIPE_OUT ====
 		return (error(INTERNAL, "pipe syscall failed"));
 
-	//* Rempli les arguments passes a exec
+	//-- Rempli les arguments passes a exec
 	std::vector<const char *>args;
 	args.push_back(CGI_PATH);	// TODO: guess cgi path if not set ? if already set in system ?
 	args.push_back(path.c_str());
 	args.push_back(NULL);
 	
-	//* Rempli les meta var
+	//-- Rempli les meta var
 	std::string script_filename = std::string("SCRIPT_FILENAME=") + path;
 	std::string request_method = (std::string("REQUEST_METHOD=") + request.getMethod());
 	std::string query_string = (std::string("QUERY_STRING=") + queryString);
@@ -282,8 +282,8 @@ void Response::launchCGI(Request & request)
 	env.push_back(script_filename.c_str());
 	env.push_back(request_method.c_str());
 	env.push_back(query_string.c_str());
-
-	//* meta var post
+	
+	//-- meta var post
 	if (request.getMethod() == "POST")
 	{
 		ss << "CONTENT_LENGTH=" << request.getBody().length();
@@ -293,7 +293,7 @@ void Response::launchCGI(Request & request)
 		env.push_back(content_length.c_str());
 		env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
 
-		//* Passe le body en entree standard du cgi pour envoyer body post (redirige stdin)
+		//-- Passe le body en entree standard du cgi pour envoyer body post (redirige stdin)
 		if (pipe(fds_in) == -1)// OUVERTURE PIPE IN ====
 			return (error(INTERNAL, "pipe syscall failed"));
 		if (write(fds_in[1], request.getBody().c_str(), request.getBody().length()) == -1)
@@ -303,7 +303,13 @@ void Response::launchCGI(Request & request)
 	}
 	env.push_back(NULL);
 
-	//* Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi
+	for (size_t i = 0; i < args.size() - 1; i++)
+		std::cout << "args: " << args[i] << '\n';
+	std::cout << "-----hell\n";
+	for (size_t i = 0; i < env.size() - 1; i++)
+		std::cout << "env: " << env[i] << '\n';
+
+	//-- Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi
 	pid_t pid = fork();
 	if (pid == -1)
 		return (error(INTERNAL, "fork syscall failed"));
@@ -317,18 +323,22 @@ void Response::launchCGI(Request & request)
 			return (error(INTERNAL, "dup2 syscall failed"));
 		if (chdir(path.substr(0, path.rfind("/") - 1).c_str()) == -1)
 			return (error(INTERNAL, "chdir syscall failed"));
+		std::cerr << "---before execve---\n";
 		if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
 			return (error(INTERNAL, "execve syscall failed"));
 	}
 	else
 	{
+		std::cout << "-----hell will wait\n";
 		if (wait(NULL) == -1)
 			return (error(INTERNAL, "wait syscall failed"));
+		std::cout << "-----hell\n";
 		if (close(fds_out[1]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 		if (request.getMethod() == "POST" && close(fds_in[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
-		//* Recupere le retour du cgi comme reponse
+		//-- Recupere le retour du cgi comme reponse
+		std::cout << "-----hell\n";
 		char buf2[BUF_SIZE + 1];
 		ssize_t bytes_read;
 		while ((bytes_read = read(fds_out[0], buf2, BUF_SIZE)) > 0)
@@ -338,14 +348,16 @@ void Response::launchCGI(Request & request)
 		}
 		if (bytes_read == -1)
 			return (error(INTERNAL, "read syscall failed"));
+		std::cout << "-----hell\n";
 		if (close(fds_out[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 	}
 
-	//* Formate reponse cgi
+	//-- Formate reponse cgi
 	contentType = body.substr(body.find("Content-type: ") + 14, std::string::npos); //ligne contenttype
 	contentType = contentType.substr(0, contentType.find("\n"));// valeur contenttype
 
+	std::cout << "-----hell, content-type: " << contentType << '\n';
 	ss.str("");
 	ss.clear();
 	ss << body;

@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <vector>
 
-Conf::Conf(void) : listen(0), autoindex(false), clientMaxBodySize(0) { }
+Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1) { }
 
 Conf::Conf(Conf const& rhs) { *this = rhs; }
 
@@ -21,43 +21,48 @@ Conf& Conf::operator=(Conf const& rhs) {
 	this->index = rhs.index;
 	this->root = rhs.root;
 	this->clientMaxBodySize = rhs.clientMaxBodySize;
+	this->locations = rhs.locations;
+	this->locationPath = rhs.locationPath;
 	return (*this);
 }
 
 std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
-	std::vector<std::string> serverName = rhs.getServerName();
-	std::vector<std::string> index = rhs.getIndex();
-
 	os << "Server {" << std::endl;
-	if (rhs.getListen())
-		os << "\tlisten: " << rhs.getListen() << ";" << std::endl;
 
-	if (serverName.size())
+	if (rhs.listen)
+		os << "\tlisten: " << rhs.listen << ";" << std::endl;
+
+	if (rhs.serverName.size())
 	{
 		os << "\tserver_name:";
-		for (std::vector<std::string>::iterator it = serverName.begin(); it != serverName.end(); ++it)
+		for (std::vector<std::string>::const_iterator it = rhs.serverName.begin(); it != rhs.serverName.end(); ++it)
 			os << " " << *it;
 		os << ";" << std::endl;
 	}
 	
-	if (index.size())
+	if (!rhs.index.empty())
 	{
 		os << "\tindex:";
-		for (std::vector<std::string>::iterator it = index.begin(); it != index.end(); ++it)
+		for (std::vector<std::string>::const_iterator it = rhs.index.begin(); it != rhs.index.end(); ++it)
 			os << " " << *it;
 		os << ";" << std::endl;
 	}
 
-	if (!rhs.getRoot().empty())
-		os << "\troot: " << rhs.getRoot() << ";\n";
+	if (!rhs.root.empty())
+		os << "\troot: " << rhs.root << ";\n";
 
-	if (rhs.getAutoindex())
+	if (rhs.autoindex)
 		os << "\tautoindex: on;" << std::endl;
 
-	if (rhs.getClientMaxBodySize())
-		os << "\tclientMaxBodySize: " << rhs.getClientMaxBodySize() << ";\n";
-	os << "}" << std::endl;
+	if (rhs.clientMaxBodySize)
+		os << "\tclientMaxBodySize: " << rhs.clientMaxBodySize << ";\n";
+	
+	for(std::map<std::string, Conf>::const_iterator it = rhs.locations.begin(); it != rhs.locations.end(); it++)
+		std::cout << "location " << it->first << " " << it->second;
+	// boucle pour chaque element de la map
+		// affiche la key et la value
 
+	os << "}" << std::endl;
 	return (os);
 }
 
@@ -133,9 +138,9 @@ void Conf::setClientMaxBodySize(std::vector<std::string> const& values) {	// TOD
 	}
 }
 
-uint16_t Conf::getListen() const { return (this->listen); }
-std::vector<std::string> Conf::getServerName() const { return (this->serverName); }
-bool Conf::getAutoindex() const { return (this->autoindex); }
-std::vector<std::string> Conf::getIndex() const {return (this->index); }
-std::string Conf::getRoot() const { return (this->root); }
-std::size_t Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }
+//uint16_t Conf::getListen() const { return (this->listen); }
+//std::vector<std::string> Conf::getServerName() const { return (this->serverName); }
+//bool Conf::getAutoindex() const { return (this->autoindex); }
+//std::vector<std::string> Conf::getIndex() const {return (this->index); }
+//std::string Conf::getRoot() const { return (this->root); }
+//std::size_t Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }

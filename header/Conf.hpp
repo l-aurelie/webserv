@@ -22,22 +22,22 @@ class Conf
 		void setRoot(std::vector<std::string> const& values);
 		void setClientMaxBodySize(std::vector<std::string> const& values);
 
-		uint16_t getListen() const;
-		std::vector<std::string> getServerName() const;
-		bool getAutoindex() const;
-		std::vector<std::string> getIndex() const;
-		std::string getRoot() const;
-		std::size_t getClientMaxBodySize() const;
+	//	uint16_t getListen() const;
+	//	std::vector<std::string> getServerName() const;
+	//	bool getAutoindex() const;
+	//	std::vector<std::string> getIndex() const;
+	//	std::string getRoot() const;
+	//	std::size_t getClientMaxBodySize() const;
 
-		std::map< std::string, Conf > locations;	//TODO: Private ?
-
-	private:
 		uint16_t listen;
 		std::vector<std::string> serverName;
-		bool autoindex;
+		int autoindex;
 		std::vector<std::string> index;
 		std::string root;
-		std::size_t clientMaxBodySize;
+		int clientMaxBodySize;
+		std::string locationPath;
+		std::map< std::string, Conf > locations;	//TODO: Private ?
+	private:
 };
 
 std::ostream & operator<<(std::ostream & os, Conf const& rhs);

@@ -42,6 +42,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [ ] possiblity de changer les pages d'error
 	- [ ] faire des HTTP redirection 301 + header Location: URL
 	- [ ] autoindex on/off
+	- [ ] allow_method
 	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes
@@ -56,9 +57,11 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] adapter les status de reponse
 	- [x] adapter les reponses en fonction de la Conf
 	- [ ] default error page
-	- [ ] POST
+	- [ ] POST avec requete = POST /index.html HTTP/1.1
 	- [ ] send image
 	- [ ] utiliser autoindex
+	- [ ] upload fichier
+	- [ ] download fichier
 - [ ] CGI
 	- [x] C'est quoi ?
 	- [x] Faire requete GET dans le terminal

@@ -25,8 +25,7 @@ static void openConfigFile(std::string const& path, std::ifstream &readFile) {
 }
 
 //TODO: gestion error exit failure ? 
-static Conf parseDirectives(std::stringstream & ss) {
-	Conf conf;
+static void parseDirectives(std::stringstream & ss, Conf & conf) {
 	std::string word;
 	std::map<std::string, void (Conf::*)(std::vector<std::string> const&)> directives;
 
@@ -64,14 +63,32 @@ static Conf parseDirectives(std::stringstream & ss) {
 		(conf.*(directives[key]))(vec);
 		ss >> word;
 	}
-	return (conf);
+}
+
+void completeConfLocation(Conf & conf)
+{
+	//TODO: Rajouter les futures variable parsees
+	if (conf.autoindex == -1)
+		conf.autoindex = 0;
+	if (conf.clientMaxBodySize == -1)
+		conf.clientMaxBodySize = 0;
+
+	for (std::map<std::string, Conf>::iterator it = conf.locations.begin(); it != conf.locations.end(); it++)
+	{
+		if(it->second.autoindex == -1)
+			it->second.autoindex = conf.autoindex;
+		if(it->second.index.empty())
+			it->second.index = conf.index;
+		if(it->second.root.empty())
+			it->second.root = conf.root;
+		if(it->second.clientMaxBodySize == -1)
+			it->second.clientMaxBodySize = conf.clientMaxBodySize;
+	}
 }
 
 //TODO: gestion erreurs exit failure
 std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
-
 	std::map< uint16_t, std::vector<Conf> > confs;
-	Conf conf;
 	std::ifstream readFile;
 	std::stringstream ss;
 	openConfigFile(path, readFile);
@@ -79,11 +96,12 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 
 	std::string buf;
 	ss >> buf;
-	//* Lecture fichier conf
+	//-- Lecture fichier conf
 	while (!ss.eof())
 	{
+		Conf conf;
 		std::stringstream blockServer;
-		//* Gestion erreur blockServ
+		//-- Gestion erreur blockServ
 		if (buf != "server") { // maybe keywords before first "server {"
 			std::cerr << "conf file erreur: no 'server' keyword \n";
 			exit(EXIT_FAILURE);
@@ -93,19 +111,20 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 			std::cerr << "conf file erreur: no '{' after 'server' \n";
 			exit(EXIT_FAILURE);
 		}
-		//* DECOUPE 1BLOCK-SERV
+		//-- DECOUPE 1BLOCK-SERV
 		else if (buf == "{") {	// '{'
 			std::string record(buf);
 			ss >> buf;
 			while (!ss.eof() && buf != "}" && buf != "server" && buf != "{") {
-				//* DECOUPE BLOCK LOCATION
+				//-- DECOUPE BLOCK LOCATION
 				if(buf == "location" && (record == "}" || record == "{" || record[record.length() - 1] == ';'))
 				{
 					std::stringstream blockLocation;
+					//-- on recup le path de location
 					ss >> buf;
-					std::string locationPath(buf); // on recup le path de location
+					std::string location_path(buf); 
 					ss >> buf;
-					if (buf != "{") // TOUJOURS { apres locationPath
+					if (buf != "{") // tjrs '{' apres locationPath
 					{
 						std::cerr << "conf file erreur: no '{' after 'location' \n";
 						exit(EXIT_FAILURE);
@@ -113,39 +132,44 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 					else if (buf == "{")
 					{
 						ss >> buf;
-						//* Decoupe bloc location
+						//-- Concatene bloc location
 						while (!ss.eof() && buf != "}" && buf != "{")
 						{
+							//-- Split " " et ";"
 							if (buf[buf.length() - 1] == ';')
 								blockLocation << buf.substr(0, buf.length() - 1) << " ; ";
 							else
 								blockLocation << buf << " ";
 							ss >> buf;
 						}
+						//-- Decoupe location finie, parse location-conf, ajoute a la map locations presente dans la conf du blocserv
 						if (buf == "}")
 						{
-							conf.locations[locationPath] = parseDirectives(blockLocation);
-							std::cerr << "Location[\"" << locationPath << "\"] = " << conf.locations[locationPath] << std::endl;
+							parseDirectives(blockLocation, conf.locations[location_path]);
+							conf.locations[location_path].locationPath = location_path;
 						}
 						else {
 							std::cerr << "conf file erreur, location end wihtout '}' \n";
-							exit(EXIT_FAILURE); 
+							exit(EXIT_FAILURE);
 						}
 					}
 				}
-				else if (buf[buf.length() - 1] == ';') {
+				//-- Split " " et ";"
+				else if (buf[buf.length() - 1] == ';')
+				//if (buf[buf.length() - 1] == ';')
 					blockServer << buf.substr(0, buf.length() - 1) << " ; ";
-				}
-				else // pas de ';' au dernier mot
-				{
+				else
 					blockServer << buf << " ";
-				}
 				record = buf;
 				ss >> buf;
 			}
+			//-- Decoupe blocserv finie, parse bloc serv et ajoute a la map Confss
 			if (!ss.eof() && buf == "}") {	// '}'
-				conf = parseDirectives(blockServer);
-				confs[conf.getListen()].push_back(conf);
+				parseDirectives(blockServer, conf);
+				completeConfLocation(conf);
+			//	std::cerr << "Location[\"" << locationPath << "\"] = " << conf.locations[locationPath] << std::endl;
+				// avant de push_back, completer conf.locations
+				confs[conf.listen].push_back(conf);
 			}
 			else {
 				std::cerr << "conf file erreur, end wihtout '}' \n";

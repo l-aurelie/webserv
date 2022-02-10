@@ -39,7 +39,7 @@ std::vector<Conf> Server::getConfs() const { return (this->confs); }
 
 /* CREATION SOCKET SERVER, BIND, MISE EN ECOUTE AJOUT SOCKETSERV COMME PREMIER ELEMENT DU VECT<POLLFD>*/
 bool Server::initServ(int port) {
-	std::cout << "New server on " << confs[0].getListen() << std::endl;
+	std::cout << "New server on " << confs[0].listen << std::endl;
 
 	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -115,8 +115,11 @@ void Server::listenRequest(int client_id) {
 	{
 		if (req.getMethod().empty()) //condition pour parser une seule fois
 			req = Parser::parseRequest(req);
-		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
+		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
 
+		/*
+  		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
+		*/
 		/* On ajoute buf a notre string de requete tant qu'on a pas atteint content length ou maxbody */
 		if(client_max_body_size && req.buffer.length() > req.headerSize + client_max_body_size)
 			req.statusCode = TOO_LARGE;

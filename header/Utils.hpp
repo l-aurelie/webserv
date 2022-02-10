@@ -7,7 +7,7 @@
 namespace Utils
 {
 
-Conf const& selectConf(std::vector<Conf> &confs, std::string const& server_name);
+Conf const& selectConf(std::vector<Conf> &confs, std::string const& server_name, std::string const& path);
 std::size_t header_is_full(std::string & buf);
 
 }
