@@ -23,6 +23,7 @@ class Conf
 		void setClientMaxBodySize(std::vector<std::string> const& values);
 		void setReturn(std::vector<std::string> const& values);
 		void setErrorPages(std::vector<std::string> const& values);
+		void setAllowedMethods(std::vector<std::string> const& values);
 
 	//	uint16_t getListen() const;
 	//	std::vector<std::string> getServerName() const;
@@ -35,6 +36,7 @@ class Conf
 		std::vector<std::string> serverName;
 		int autoindex;
 		std::vector<std::string> index;
+		std::vector<std::string> allowedMethods;
 		std::string root;
 		int clientMaxBodySize;
 		std::map< std::string, Conf > locations;	//TODO: Private ?

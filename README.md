@@ -41,7 +41,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] faire des HTTP redirection 301 + header Location: URL
 	- [x] possiblity de changer les pages d'error
 	- [x] autoindex on/off
-	- [ ] allow_method
+	- [x] allowed_method
 	- [ ] Gerer clientbodysize taille (m, g, k)
 	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
 - [ ] parsing des requetes clients
@@ -58,10 +58,10 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] adapter les reponses en fonction de la Conf
 	- [x] default error page
 	- [x] send image
-	- [ ] utiliser autoindex
-	- [ ] POST avec requete = POST /index.html HTTP/1.1
+	- [x] utiliser autoindex
 	- [ ] upload fichier
 	- [ ] download fichier
+	- [x] 301 request if file is folder to folder/
 - [ ] CGI
 	- [x] C'est quoi ?
 	- [x] Faire requete GET dans le terminal
@@ -86,7 +86,6 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 - [ ] impossible de supprimer un dossier
 - [ ] 409 Conflict when rm a folder that contains a file without perms
 - [ ] how to test DELETE on browser ?
-- [ ] /Users/antoine/Documents/GitHub/webserv/site///photos/a => libc++abi: terminating with uncaught exception of type std::out_of_range: basic_string  [] 49838 abort      ./webserv
 
 ## Doc
 

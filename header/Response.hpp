@@ -28,6 +28,8 @@ class Response {
 		std::string contentType;
 		std::string server;
 		std::string location;
+		std::string date;
+		std::string lastModified;
 
 		std::string body;
 

@@ -37,6 +37,7 @@ static void parseDirectives(std::stringstream & ss, Conf & conf) {
 	directives["client_max_body_size"] = &Conf::setClientMaxBodySize;
 	directives["return"] = &Conf::setReturn;
 	directives["error_page"] = &Conf::setErrorPages;
+	directives["allowed_methods"] = &Conf::setAllowedMethods;
 
 	ss >> word;
 	while (!ss.eof())

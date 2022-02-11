@@ -4,9 +4,11 @@
 #include "Utils.hpp"
 #include "webserv.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <dirent.h>
 #include <exception>
 #include <fstream>
@@ -32,6 +34,8 @@ Response &Response::operator=(Response const &rhs)
 	this->contentLength = rhs.contentLength;
 	this->contentType = rhs.contentType;
 	this->body = rhs.body;
+	this->date = rhs.date;
+	this->lastModified = rhs.lastModified;
 	// TODO:
 	return (*this);
 }
@@ -48,22 +52,14 @@ void Response::constructPath(Request &request, Conf const &conf)
 	path = request.getPath().substr(0, request.getPath().find("?"));
 	if (queryString == path)
 		queryString = "";
-	//-- Enleve le location path
-	/*
-		// TODO: usefull ? Need to remove locationPath from requestPath ?!
-		if (conf.locationPath.length())
-			path = std::string("/") + path.substr(conf.locationPath.length());
-	*/
 	//-- le path ne requiert pas de recherche d'index
 	if (path[path.length() - 1] != '/')
 		path = conf.root + "/" + path;
 	//-- itere sur les indexes pour trouver le bon path
 	else
 	{
-		std::cerr << " >>>> 0PATH = " << path << std::endl;
 		for (std::vector<std::string>::const_iterator it = conf.index.begin(); it != conf.index.end(); it++)
 		{
-			std::cerr << " >>>> 1PATH = " << conf.root + "/" + path + *it << std::endl;
 			if (stat((conf.root + "/" + path + *it).c_str(), &infos) != -1)
 			{
 				path = conf.root + "/" + path + *it;
@@ -71,28 +67,39 @@ void Response::constructPath(Request &request, Conf const &conf)
 			}
 		}
 	}
-	std::cerr << " >>>> 2PATH = " << path << std::endl;
-	
+	bzero(&infos, sizeof(infos));
 	//-- gere autoindex
 	if(!path.empty() && path[path.length() - 1] == '/' && conf.autoindex)
 	{
-		std::cerr << "autoindex called()" << std::endl;
 		autoIndex(path, conf.root);
 		path = "";
 		return ;
 	}
 	//-- gere les erreurs de stats du fichier demande
-	else if (stat(path.c_str(), &infos) == -1)
+	else if (stat(path.c_str(), &infos) == -1 && !(infos.st_mode & S_IFDIR))
 	{
 		statusCode = NOT_FOUND;
 		path = "";
 		return;
+	}
+	else if (infos.st_mode & S_IFDIR	// si dossier
+		&& request.getPath().find("?") == std::string::npos // si pas de queryString
+		&& request.getPath()[request.getPath().length() - 1] != '/')	// si se termine pas par un /
+	{
+		redirected(301, request.getPath() + "/");
 	}
 	else if (infos.st_mode & S_IFDIR || !(infos.st_mode & S_IRUSR))
 	{
 		statusCode = FORBIDDEN;
 		path = "";
 		return;
+	}
+	else
+	{
+		struct tm * timeinfo = localtime(&infos.st_mtime);
+		char buf[30];
+		strftime(buf, 30, "%a, %d %h %Y %T %Z", timeinfo);
+		this->lastModified = buf;
 	}
 }
 
@@ -149,7 +156,8 @@ void Response::autoIndex(std::string const& path, std::string const& root)
 			if (std::string(dir->d_name) == "." || std::string(dir->d_name) == "..")
 				continue ;
 			bdy << "<a href=\"" << dir->d_name << "\">" << dir->d_name << "</a>\n";
-			// TODO: segv
+			// TODO: print dates
+			// sort alphabeticly ?
 		}
 		closedir(d);
 	}
@@ -176,6 +184,9 @@ std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs
 	/* Gere les erreurs presentes en amont */
 	if (!request.statusCode.empty())
 		return (errorFillResponse(request.statusCode, conf));
+	/* Gere method not allowed */	
+	if (std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
+		return (errorFillResponse(METHOD_NOT_ALLOWED, conf));
 	/* Gere les redirection */
 	if (conf.redirectCode)
 		redirected(conf.redirectCode, conf.redirectURL);
@@ -197,7 +208,6 @@ void Response::setContentType()
 	if (!contentType.empty())
 		return ;
 
-	std::cerr << "This is path in setContentType(): " << path << std::endl;
 	/* Recupere l'extension */
 	std::string extension = path.substr(path.rfind(".") + 1);
 
@@ -226,6 +236,13 @@ void Response::fillHeader()
 {
 	protocolVersion = "HTTP/1.1";
 	server = "webserv";
+
+	time_t rawtime;
+	time(&rawtime);
+	struct tm * timeinfo = localtime(&rawtime);
+	char buf[30];
+	strftime(buf, 30, "%a, %d %h %Y %T %Z", timeinfo);
+	this->date = buf;
 
 	setContentType();
 	contentLength = body.length();
@@ -312,6 +329,9 @@ std::string Response::format() const
 	ss << "Content-Type: " << this->contentType << '\n';
 	if (!this->location.empty())
 		ss << "Location: " << this->location << '\n';
+	ss << "Date: " << this->date << '\n';
+	if (!this->lastModified.empty())
+		ss << "Last-Modified: " << this->lastModified << '\n';
 	ss << '\n';
 	ss << this->body;
 	return ss.str();
@@ -371,12 +391,6 @@ void Response::launchCGI(Request & request)
 	}
 	env.push_back(NULL);
 
-	for (size_t i = 0; i < args.size() - 1; i++)
-		std::cout << "args: " << args[i] << '\n';
-	std::cout << "-----hell\n";
-	for (size_t i = 0; i < env.size() - 1; i++)
-		std::cout << "env: " << env[i] << '\n';
-
 	//-- Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi
 	pid_t pid = fork();
 	if (pid == -1)
@@ -391,22 +405,18 @@ void Response::launchCGI(Request & request)
 			return (error(INTERNAL, "dup2 syscall failed"));
 		if (chdir(path.substr(0, path.rfind("/") - 1).c_str()) == -1)
 			return (error(NOT_FOUND, "chdir syscall failed"));
-		std::cerr << "---before execve---\n";
 		if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
 			return (error(INTERNAL, "execve syscall failed"));
 	}
 	else
 	{
-		std::cout << "-----hell will wait\n";
 		if (wait(NULL) == -1)
 			return (error(INTERNAL, "wait syscall failed"));
-		std::cout << "-----hell\n";
 		if (close(fds_out[1]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 		if (request.getMethod() == "POST" && close(fds_in[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 		//-- Recupere le retour du cgi comme reponse
-		std::cout << "-----hell\n";
 		char buf2[BUF_SIZE + 1];
 		ssize_t bytes_read;
 		while ((bytes_read = read(fds_out[0], buf2, BUF_SIZE)) > 0)
@@ -416,7 +426,6 @@ void Response::launchCGI(Request & request)
 		}
 		if (bytes_read == -1)
 			return (error(INTERNAL, "read syscall failed"));
-		std::cout << "-----hell\n";
 		if (close(fds_out[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 	}
@@ -425,7 +434,6 @@ void Response::launchCGI(Request & request)
 	contentType = body.substr(body.find("Content-type: ") + 14, std::string::npos); //ligne contenttype
 	contentType = contentType.substr(0, contentType.find("\n"));// valeur contenttype
 
-	std::cout << "-----hell, content-type: " << contentType << '\n';
 	ss.str("");
 	ss.clear();
 	ss << body;

@@ -6,7 +6,11 @@
 #include <stdint.h>
 #include <vector>
 
-Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) { }
+Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) {
+	allowedMethods.push_back("GET");
+	allowedMethods.push_back("POST");
+	allowedMethods.push_back("DELETE");
+}
 
 Conf::Conf(Conf const& rhs) { *this = rhs; }
 
@@ -26,6 +30,7 @@ Conf& Conf::operator=(Conf const& rhs) {
 	this->redirectCode = rhs.redirectCode;
 	this->redirectURL = rhs.redirectURL;
 	this->errorPages = rhs.errorPages;
+	this->allowedMethods = rhs.allowedMethods;
 	return (*this);
 }
 
@@ -66,6 +71,12 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 	for (std::map< int, std::string >::const_iterator it = rhs.errorPages.begin(); it != rhs.errorPages.end(); it++)
 		std::cout << "error_page " << it->first << " " << it->second;
 
+	if (!rhs.allowedMethods.empty()) {
+		os << "\tallowedMethods:";
+		for (std::vector<std::string>::const_iterator it = rhs.allowedMethods.begin(); it != rhs.allowedMethods.end(); ++it)
+			os << " " << *it;
+		os << ";" << std::endl;
+	}
 	os << "}" << std::endl;
 	return (os);
 }
@@ -193,6 +204,19 @@ void Conf::setErrorPages(std::vector<std::string> const& values)
 		exit(EXIT_FAILURE);
 	}
 	this->errorPages[code] = values[1];
+}
+
+void Conf::setAllowedMethods(std::vector<std::string> const& values) {
+	this->allowedMethods.clear();
+	for (std::vector<std::string>::const_iterator it = values.begin(); it != values.end(); ++it)
+	{
+		if (*it != "GET" && *it != "POST" && *it != "DELETE")
+		{
+			std::cerr << "error: config file : 'allowed_methods' only GET, POST and DELETE are implemented" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+	this->allowedMethods = values;
 }
 
 //uint16_t Conf::getListen() const { return (this->listen); }
