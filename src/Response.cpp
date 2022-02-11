@@ -29,13 +29,17 @@ Response &Response::operator=(Response const &rhs)
 {
 	if (this == &rhs)
 		return (*this);
+	this->path = rhs.path;
+	this->queryString = rhs.queryString;
 	this->protocolVersion = rhs.protocolVersion;
 	this->statusCode = rhs.statusCode;
 	this->contentLength = rhs.contentLength;
 	this->contentType = rhs.contentType;
-	this->body = rhs.body;
+	this->server = rhs.server;
+	this->location = rhs.location;
 	this->date = rhs.date;
 	this->lastModified = rhs.lastModified;
+	this->body = rhs.body;
 	// TODO:
 	return (*this);
 }
@@ -84,7 +88,7 @@ void Response::constructPath(Request &request, Conf const &conf)
 	}
 	else if (infos.st_mode & S_IFDIR	// si dossier
 		&& request.getPath().find("?") == std::string::npos // si pas de queryString
-		&& request.getPath()[request.getPath().length() - 1] != '/')	// si se termine pas par un /
+		&& request.getPath()[request.getPath().length() - 1] != '/')	// si ne se termine pas par un /
 	{
 		redirected(301, request.getPath() + "/");
 	}

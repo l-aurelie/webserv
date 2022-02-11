@@ -12,15 +12,17 @@ Request::~Request() {}
 Request& Request::operator=(Request const& rhs) {
 	if (this == &rhs)
 		return (*this);
+	this->buffer = rhs.buffer;
+	this->body = rhs.body;
+	this->statusCode = rhs.statusCode;
+	this->headerSize = rhs.headerSize;
+
 	this->method = rhs.method;
 	this->path = rhs.path;
 	this->protocolVersion = rhs.protocolVersion;
 	this->serverName = rhs.serverName;
-	this->port = rhs.port;
-	this->statusCode = rhs.statusCode;
-	this->buffer = rhs.buffer;
-	this->headerSize = rhs.headerSize;
 	this->contentLength = rhs.contentLength;
+	this->port = rhs.port;
 	return (*this);
 }
 
@@ -113,4 +115,3 @@ Request & Request::errorMsg(std::string statusCode, const char * err_msg){
 	std::cerr << "error: request: " << err_msg << std::endl;
 	return (*this);
 }
-

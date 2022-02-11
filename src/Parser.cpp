@@ -71,13 +71,21 @@ static void parseDirectives(std::stringstream & ss, Conf & conf) {
 void completeConfLocation(Conf & conf)
 {
 	//TODO: Rajouter les futures variable parsees
+	/* Initialise les variables de la conf Server{} */
 	if (conf.autoindex == -1)
 		conf.autoindex = 0;
 	if (conf.clientMaxBodySize == -1)
 		conf.clientMaxBodySize = 0;
 	if (conf.redirectCode == -1)
 		conf.redirectCode = 0;
+	if (conf.allowedMethods.empty())
+	{
+		conf.allowedMethods.push_back("GET");
+		conf.allowedMethods.push_back("POST");
+		conf.allowedMethods.push_back("DELETE");
+	}
 
+	/* Initialise les variables locations vides aux valeurs de la conf Server{} */
 	for (std::map<std::string, Conf>::iterator it = conf.locations.begin(); it != conf.locations.end(); it++)
 	{
 		if(it->second.autoindex == -1)
@@ -92,11 +100,16 @@ void completeConfLocation(Conf & conf)
 			it->second.redirectCode = conf.redirectCode;
 		if(it->second.redirectURL.empty())
 			it->second.redirectURL = conf.redirectURL;
+		if (it->second.allowedMethods.empty())
+			it->second.allowedMethods = conf.allowedMethods;
+		if (it->second.errorPages.empty())
+			it->second.errorPages = conf.errorPages;
 	}
 }
 
 //TODO: gestion erreurs exit failure
-std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
+std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path)
+{
 	std::map< uint16_t, std::vector<Conf> > confs;
 	std::ifstream readFile;
 	std::stringstream ss;

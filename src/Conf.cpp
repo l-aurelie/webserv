@@ -6,11 +6,7 @@
 #include <stdint.h>
 #include <vector>
 
-Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) {
-	allowedMethods.push_back("GET");
-	allowedMethods.push_back("POST");
-	allowedMethods.push_back("DELETE");
-}
+Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) {}
 
 Conf::Conf(Conf const& rhs) { *this = rhs; }
 

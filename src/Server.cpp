@@ -27,6 +27,7 @@ Server&	Server::operator=(Server const& rhs) {
 		return (*this);
 	this->socketServer = rhs.socketServer;
 	this->fds = rhs.fds;
+	this->msg_from_client = rhs.msg_from_client;
 	this->msg_to_client = rhs.msg_to_client;
 	this->confs = rhs.confs;
 	return (*this);

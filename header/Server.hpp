@@ -28,7 +28,6 @@ class Server
 		std::vector<struct pollfd> fds;
 		std::map<int, Request> msg_from_client;
 		std::map<int, std::string> msg_to_client;
-
 		std::vector<Conf> confs;
 
 		void acceptClient();
@@ -37,4 +36,3 @@ class Server
 		void endConnection(std::vector<struct pollfd>::iterator it);
 		void findHeaderSizeAndContentLength(std::string const& buf, std::size_t & header_size, std::size_t & content_length) const;
 };
-
