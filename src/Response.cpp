@@ -48,8 +48,9 @@ void Response::constructPath(Request &request, Conf const &conf)
 	path = request.getPath().substr(0, request.getPath().find("?"));
 	if (queryString == path)
 		queryString = "";
+	//-- Enleve le location path
 	if (conf.locationPath.length())
-		path = std::string("/") + path.substr(conf.locationPath.length());//Supprime le location path
+		path = std::string("/") + path.substr(conf.locationPath.length());
 	//-- le path ne requiert pas de recherche d'index
 	if (path[path.length() - 1] != '/')
 		path = conf.root + "/" + path;
@@ -82,20 +83,34 @@ void Response::constructPath(Request &request, Conf const &conf)
 }
 
 /* PREPARE LA REPONSE POUR LES CAS D'ERREUR (REMPLI LE BODY AVEC LA PAGE D'ERREUR CORRESPONDANTE au status code,  rempli le header) LA RENVOIE FORMATEE EN STRING */
-std::string Response::errorFillResponse(std::string code)
+std::string Response::errorFillResponse(std::string code, Conf & conf)
 {
-	std::cerr << "errorFillResponse() called" << std::endl;
-	// TODO: autres statuts d'erreur?
 	std::stringstream ss;
-	// TODO:
-	// si dans la conf j'ai error_page 403 PATH
-	//	on utilise PATH
-	// Sinon on calcule le path
-	ss << "./error_pages/" << code;	// TODO: dynamic path
-	ss >> path;
-	path += ".html";
+	int error_code;
+
+	ss << code;
+	ss >> error_code;
+	if (!std::isdigit(code[0]) || ss.fail())
+	{
+		std::cerr << "Error: error code is not valid" << std::endl;	// TODO: error func
+		exit(EXIT_FAILURE);
+	}
 	ss.str("");
 	ss.clear();
+
+	if (conf.errorPages.count(error_code))
+	{
+		path = conf.root + "/" + conf.errorPages[error_code];
+	}
+	else
+	{
+		ss << "./error_pages/" << error_code << ".html";
+		ss >> path;
+		ss.str("");
+		ss.clear();
+	}
+
+	std::cerr << ">>>>>>PATH ERR = " << path << std::endl;
 
 	std::ifstream f(path.c_str());
 	ss << f.rdbuf();
@@ -105,6 +120,7 @@ std::string Response::errorFillResponse(std::string code)
 	return (format());
 }
 
+/* EFFECTUE REDIRECTION : SET LOCATION DANS LE HEADER ET STATUS CODE */
 void Response::redirected(int code, std::string const& url)
 {
 	if (code == 301)	// TODO: other redirect codes
@@ -117,11 +133,11 @@ void Response::redirected(int code, std::string const& url)
 /* REMPLI LA REPONSE ET LA RENVOIE FORMATEE EN STRING */
 std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs)
 {
+	/* Selectionne la conf pour la reponse */
+	Conf & conf = Utils::selectConf(confs, request.getServerName(), request.getPath());
 	/* Gere les erreurs presentes en amont */
 	if (!request.statusCode.empty())
-		return (errorFillResponse(request.statusCode));
-	/* Selectionne la conf pour la reponse */
-	Conf const& conf = Utils::selectConf(confs, request.getServerName(), request.getPath());
+		return (errorFillResponse(request.statusCode, conf));
 	/* Gere les redirection */
 	if (conf.redirectCode)
 		redirected(conf.redirectCode, conf.redirectURL);
@@ -130,7 +146,7 @@ std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs
 	{
 		fillBody(request, conf);
 		if (statusCode != "200 OK")
-			return (errorFillResponse(statusCode));
+			return (errorFillResponse(statusCode, conf));
 	}
 	/* Rempli le header */
 	fillHeader();
@@ -144,8 +160,10 @@ void Response::setContentType()
 		return ;
 
 	std::cerr << "This is path in setContentType(): " << path << std::endl;
+	/* Recupere l'extension */
 	std::string extension = path.substr(path.rfind(".") + 1);
 
+	/* Compare et selectionne dans le fichier de ref */
 	std::ifstream mime_types("./conf/mime.types");
 	std::stringstream ss;
 	std::string type;
@@ -160,7 +178,7 @@ void Response::setContentType()
 			break;
 		}
 	}
-	if (type.empty())
+	if (type.empty())//TODO: Retirer le par defaut ?
 		type = "application/octet-stream";
 	contentType = type;
 }
@@ -213,7 +231,6 @@ void Response::getFile(Request &request, Conf const &conf)
 
 	/* Le fichier demande est un CGI */
 	//if (path.substr(path.substr(0, path.find("?")).rfind(".")) == ".php")
-	
 	if (path.substr(path.rfind(".")) == ".php")
 	{
 		std::cout << "cgi in get " << std::endl;

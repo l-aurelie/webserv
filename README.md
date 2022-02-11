@@ -38,11 +38,11 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] Checker mauvaises infos du fichier de config
 	- [x] client max body size
 	- [x] location block
-	- [ ] Gerer clientbodysize taille (m, g, k)
-	- [ ] possiblity de changer les pages d'error
-	- [ ] faire des HTTP redirection 301 + header Location: URL
+	- [x] faire des HTTP redirection 301 + header Location: URL
+	- [x] possiblity de changer les pages d'error
 	- [ ] autoindex on/off
 	- [ ] allow_method
+	- [ ] Gerer clientbodysize taille (m, g, k)
 	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes

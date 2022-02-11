@@ -2,6 +2,7 @@
 
 #include "Conf.hpp"
 #include "Request.hpp"
+#include <map>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -37,11 +38,10 @@ class Response {
 		std::string format() const;
 		void setContentType();
 		std::string matchingExtensionType(const std::string &extension);
-		std::string errorFillResponse(std::string code);
+		std::string errorFillResponse(std::string code, Conf & conf);
 		
 		void deleteFile(Request &request, Conf const &conf);
 		void getFile(Request & request, Conf const& conf);
 		void launchCGI(Request &request);
 		void error(std::string const & status_code, std::string const & error);
-
 };

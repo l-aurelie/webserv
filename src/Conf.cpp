@@ -25,6 +25,7 @@ Conf& Conf::operator=(Conf const& rhs) {
 	this->locationPath = rhs.locationPath;
 	this->redirectCode = rhs.redirectCode;
 	this->redirectURL = rhs.redirectURL;
+	this->errorPages = rhs.errorPages;
 	return (*this);
 }
 
@@ -61,8 +62,9 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 	
 	for(std::map<std::string, Conf>::const_iterator it = rhs.locations.begin(); it != rhs.locations.end(); it++)
 		std::cout << "location " << it->first << " " << it->second;
-	// boucle pour chaque element de la map
-		// affiche la key et la value
+
+	for (std::map< int, std::string >::const_iterator it = rhs.errorPages.begin(); it != rhs.errorPages.end(); it++)
+		std::cout << "error_page " << it->first << " " << it->second;
 
 	os << "}" << std::endl;
 	return (os);
@@ -160,12 +162,37 @@ void Conf::setReturn(std::vector<std::string> const& values) {
 		std::cerr << "error: config file : 'return' unsigned numeric code required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	if (this->redirectCode != 301 && this->redirectCode != 307)
+	if (this->redirectCode != 301 && this->redirectCode != 307)// TODO: other codes
 	{
 		std::cerr << "error: config file : 'return' only 301 and 307 code are implemented" << std::endl;	// TODO: implement other codes
 		exit(EXIT_FAILURE);
 	}
 	this->redirectURL = values[1];
+}
+
+void Conf::setErrorPages(std::vector<std::string> const& values)
+{
+	if (values.size() != 2)
+	{
+		std::cerr << "error: config file : 'error_page' need code and path" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (!std::isdigit(values[0][0]))
+	{
+		std::cerr << "error: config file : 'error_page' unsigned numeric code required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	int code;
+	std::stringstream ss;
+	ss << values[0];
+	ss >> code;
+	if (ss.fail())
+	{
+		std::cerr << "error: config file : 'error_page' unsigned numeric code required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	this->errorPages[code] = values[1];
 }
 
 //uint16_t Conf::getListen() const { return (this->listen); }

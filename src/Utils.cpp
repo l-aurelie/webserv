@@ -22,14 +22,14 @@ Conf const& selectConf(std::vector<Conf> & confs, std::string const& server_name
 	return (confs[0]);
 }
 */
-Conf const& selectConf(std::vector<Conf> & confs, std::string const& server_name, std::string const& request_path) {
+Conf & selectConf(std::vector<Conf> & confs, std::string const& server_name, std::string const& request_path) {
 	for (std::vector<Conf>::iterator it = confs.begin(); it != confs.end(); ++it) // pour chaque conf dans confs
 	{
 		for (std::vector<std::string>::const_iterator it2 = it->serverName.begin(); it2 != it->serverName.end(); ++it2) // pour chaque server_name dans conf
 		{
 			if (*it2 == server_name) // la conf correspond au server_name
 			{
-				for (std::map<std::string, Conf>::const_iterator it3 = it->locations.begin(); it3 != it->locations.end(); ++it3) // pour chaque location dans conf
+				for (std::map<std::string, Conf>::iterator it3 = it->locations.begin(); it3 != it->locations.end(); ++it3) // pour chaque location dans conf
 				{
 					if (request_path.find(it3->first) == 0)	//if path parameter start with locationPath
 						return (it3->second);
