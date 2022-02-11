@@ -137,9 +137,17 @@ void Server::listenRequest(int client_id) {
 
 /*  ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse : poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */ 
 void Server::answerRequest(int client_id) {
+	if (msg_from_client[client_id].getPath() == "/favicon.ico")	// TODO: disable favicon.ico
+	{
+		msg_to_client[client_id] = "HTTP/1.1 404 Not Found\nServer: webserv\nContent-Length: 158\nContent-Type: text/html\n\n<!DOCTYPE html>\n<head>\n<title>404 Not Found</title>\n</head>\n<body>\n<center>\n<h1>404 Not Found</h1>\n<hr />\n<h3>webserv</h3>\n</center>\n</body>\n</html>";
+		if (send(client_id, msg_to_client[client_id].c_str(), msg_to_client[client_id].length(), 0) <= 0)
+			std::cerr << "send error \n"; // g_error ? 
+		return ;
+	}
+
 	Response response;
 	/* Prepare la reponse */
-	std::cout << "Request buf = |" << std::endl << msg_from_client[client_id].buffer << "|\n";
+	//std::cout << "Request buf = |" << std::endl << msg_from_client[client_id].buffer << "|\n";
 	std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
 	msg_to_client[client_id] = response.prepareResponse(msg_from_client[client_id], this->confs);
 	

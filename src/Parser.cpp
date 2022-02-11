@@ -154,7 +154,7 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path) {
 						if (buf == "}")
 						{
 							parseDirectives(blockLocation, conf.locations[location_path]);
-							conf.locations[location_path].locationPath = location_path;
+							//conf.locations[location_path].locationPath = location_path;
 						}
 						else {
 							std::cerr << "conf file erreur, location end wihtout '}' \n";
@@ -301,7 +301,6 @@ Request parseRequest(Request & request){
 	std::stringstream ss(request.buffer);
 	std::string buf;
 
-	std::cout << "Calling parseRequest();" << '\n';
 	//std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
 	ss >> buf;
 	if (buf != "POST" && buf != "GET" && buf != "DELETE")

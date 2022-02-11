@@ -40,6 +40,7 @@ class Response {
 		std::string matchingExtensionType(const std::string &extension);
 		std::string errorFillResponse(std::string code, Conf & conf);
 		
+		void autoIndex(std::string const& path, std::string const& root);
 		void deleteFile(Request &request, Conf const &conf);
 		void getFile(Request & request, Conf const& conf);
 		void launchCGI(Request &request);

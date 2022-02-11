@@ -38,7 +38,7 @@ class Conf
 		std::string root;
 		int clientMaxBodySize;
 		std::map< std::string, Conf > locations;	//TODO: Private ?
-		std::string locationPath;
+		//std::string locationPath;//TODO: inutile pour le moment 
 		std::string redirectURL;
 		int redirectCode;
 		std::map<int, std::string> errorPages;

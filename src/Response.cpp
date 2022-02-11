@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <dirent.h>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -17,7 +18,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
-
 
 Response::Response() {} // TODO:
 Response::Response(Response const &rhs) { *this = rhs; }
@@ -49,26 +49,40 @@ void Response::constructPath(Request &request, Conf const &conf)
 	if (queryString == path)
 		queryString = "";
 	//-- Enleve le location path
-	if (conf.locationPath.length())
-		path = std::string("/") + path.substr(conf.locationPath.length());
+	/*
+		// TODO: usefull ? Need to remove locationPath from requestPath ?!
+		if (conf.locationPath.length())
+			path = std::string("/") + path.substr(conf.locationPath.length());
+	*/
 	//-- le path ne requiert pas de recherche d'index
 	if (path[path.length() - 1] != '/')
 		path = conf.root + "/" + path;
 	//-- itere sur les indexes pour trouver le bon path
-	else 
+	else
 	{
+		std::cerr << " >>>> 0PATH = " << path << std::endl;
 		for (std::vector<std::string>::const_iterator it = conf.index.begin(); it != conf.index.end(); it++)
 		{
-			path = conf.root + "/" + path + *it;
-			if (stat(path.c_str(), &infos) == -1)
-				path = "";
-			else
+			std::cerr << " >>>> 1PATH = " << conf.root + "/" + path + *it << std::endl;
+			if (stat((conf.root + "/" + path + *it).c_str(), &infos) != -1)
+			{
+				path = conf.root + "/" + path + *it;
 				break;
+			}
 		}
 	}
-
+	std::cerr << " >>>> 2PATH = " << path << std::endl;
+	
+	//-- gere autoindex
+	if(!path.empty() && path[path.length() - 1] == '/' && conf.autoindex)
+	{
+		std::cerr << "autoindex called()" << std::endl;
+		autoIndex(path, conf.root);
+		path = "";
+		return ;
+	}
 	//-- gere les erreurs de stats du fichier demande
-	if (stat(path.c_str(), &infos) == -1)
+	else if (stat(path.c_str(), &infos) == -1)
 	{
 		statusCode = NOT_FOUND;
 		path = "";
@@ -110,14 +124,38 @@ std::string Response::errorFillResponse(std::string code, Conf & conf)
 		ss.clear();
 	}
 
-	std::cerr << ">>>>>>PATH ERR = " << path << std::endl;
-
 	std::ifstream f(path.c_str());
 	ss << f.rdbuf();
 	body = ss.str();
 	statusCode = code;
 	fillHeader();
 	return (format());
+}
+
+void Response::autoIndex(std::string const& path, std::string const& root)
+{
+	std::stringstream bdy;
+	bdy << "<html>\n<head><title>Index of ";
+	bdy << path << "</title></head>\n";
+
+	bdy << "<body>\n<h1>Index of " << path << "</h1><hr><pre>";
+	bdy << "<a href=\"../\">../</a>\n";
+	struct dirent *dir;
+	DIR *d = opendir((root + path).c_str());
+	if (d)
+	{
+		while ((dir = readdir(d)) != NULL)
+		{
+			if (std::string(dir->d_name) == "." || std::string(dir->d_name) == "..")
+				continue ;
+			bdy << "<a href=\"" << dir->d_name << "\">" << dir->d_name << "</a>\n";
+			// TODO: segv
+		}
+		closedir(d);
+	}
+	bdy << "</pre><hr></body>\n</html>";
+	contentType = "text/html";
+	body = bdy.str();
 }
 
 /* EFFECTUE REDIRECTION : SET LOCATION DANS LE HEADER ET STATUS CODE */
@@ -178,7 +216,7 @@ void Response::setContentType()
 			break;
 		}
 	}
-	if (type.empty())//TODO: Retirer le par defaut ?
+	if (type.empty())
 		type = "application/octet-stream";
 	contentType = type;
 }
@@ -186,7 +224,6 @@ void Response::setContentType()
 /* REMPLI LE HEADER */
 void Response::fillHeader()
 {
-	std::cerr << "fillHeader() called" << std::endl;
 	protocolVersion = "HTTP/1.1";
 	server = "webserv";
 
@@ -224,24 +261,18 @@ void Response::deleteFile(Request &request, Conf const &conf)
 void Response::getFile(Request &request, Conf const &conf)
 {
 	/* Recupere le path */
-	std::cerr << "getFile() called" << std::endl;
 	constructPath(request, conf);
 	if (path.empty())
 		return;
 
 	/* Le fichier demande est un CGI */
-	//if (path.substr(path.substr(0, path.find("?")).rfind(".")) == ".php")
-	if (path.substr(path.rfind(".")) == ".php")
+	if (path.rfind(".") != std::string::npos && path.substr(path.rfind(".")) == ".php")
 	{
-		std::cout << "cgi in get " << std::endl;
 		launchCGI(request);
-		std::cerr << "launchCGI() ended" << std::endl;
 	}
-
 	/* Le fichier n'est pas un CGI */
 	else
 	{
-		std::cerr << "not cgi in GET" << std::endl;
 		/* Ouvre le fichier et rempli le body */
 		std::ifstream ifs(path.c_str());
 		std::stringstream buf;
