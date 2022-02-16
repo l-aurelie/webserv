@@ -212,7 +212,7 @@ std::string tolowerstr(std::string str){
 }
 
 //TODO: parse plusieurs line
-static Request parseFields(std::stringstream & header_buf, Request & request) {
+static Request & parseFields(std::stringstream & header_buf, Request & request) {
 	std::string word;
 	std::string line;
 	std::string key;
@@ -221,7 +221,7 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 	//std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
 	fields["host"] = &Request::setHost;
 	fields["content-length"] = &Request::setContentLength;
-	fields["content-type"] = NULL;
+	fields["content-type"] = &Request::setContentType;
 	fields["user-agent"] = NULL;
 
 	fields["origin"] = NULL;
@@ -311,8 +311,8 @@ static Request parseFields(std::stringstream & header_buf, Request & request) {
 }
 */
 
-Request parseRequest(Request & request){
-	std::stringstream ss(request.buffer);
+Request & parseRequest(Request & request){
+	std::stringstream ss(request.headerBuf);
 	std::string buf;
 
 	//std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;

@@ -77,7 +77,7 @@ int	main(int argc, char **argv) {
 		for(std::vector<Server>::iterator it = servers.begin(); it != servers.end(); it++){
 			it->launch();
 		}
-	//	usleep(500);
+		usleep(500);
 	}
 	std::cerr << "main ended" << std::endl;
 	return (EXIT_SUCCESS); // g_error

@@ -44,6 +44,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] allowed_method
 	- [ ] Gerer clientbodysize taille (m, g, k)
 	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
+	- [ ] Setup the server_names or not.
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes
 	- [x] create d'objet Request
@@ -59,9 +60,11 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] default error page
 	- [x] send image
 	- [x] utiliser autoindex
-	- [ ] upload fichier
-	- [ ] download fichier
 	- [x] 301 request if file is folder to folder/
+	- [ ] upload fichier
+		- [ ] handle client_max_body_size
+		- [ ] handle content-length
+	- [ ] download fichier
 - [ ] CGI
 	- [x] C'est quoi ?
 	- [x] Faire requete GET dans le terminal

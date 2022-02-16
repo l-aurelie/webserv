@@ -35,7 +35,6 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 
 	if (rhs.listen)
 		os << "\tlisten: " << rhs.listen << ";" << std::endl;
-
 	if (rhs.serverName.size())
 	{
 		os << "\tserver_name:";
@@ -43,7 +42,6 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 			os << " " << *it;
 		os << ";" << std::endl;
 	}
-	
 	if (!rhs.index.empty())
 	{
 		os << "\tindex:";
@@ -51,22 +49,16 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 			os << " " << *it;
 		os << ";" << std::endl;
 	}
-
 	if (!rhs.root.empty())
 		os << "\troot: " << rhs.root << ";\n";
-
 	if (rhs.autoindex)
 		os << "\tautoindex: on;" << std::endl;
-
 	if (rhs.clientMaxBodySize)
 		os << "\tclientMaxBodySize: " << rhs.clientMaxBodySize << ";\n";
-	
 	for(std::map<std::string, Conf>::const_iterator it = rhs.locations.begin(); it != rhs.locations.end(); it++)
 		std::cout << "location " << it->first << " " << it->second;
-
 	for (std::map< int, std::string >::const_iterator it = rhs.errorPages.begin(); it != rhs.errorPages.end(); it++)
 		std::cout << "error_page " << it->first << " " << it->second;
-
 	if (!rhs.allowedMethods.empty()) {
 		os << "\tallowedMethods:";
 		for (std::vector<std::string>::const_iterator it = rhs.allowedMethods.begin(); it != rhs.allowedMethods.end(); ++it)
@@ -76,6 +68,8 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 	os << "}" << std::endl;
 	return (os);
 }
+
+//======================================================================//
 
 void Conf::setListen(std::vector<std::string> const& values) {
 	if (values.size() != 1)

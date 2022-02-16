@@ -31,8 +31,8 @@ class Server
 		std::vector<Conf> confs;
 
 		void acceptClient();
-		void answerRequest(int client_id);
-		void listenRequest(int client_id);
+		void answerRequest(std::vector<struct pollfd>::iterator it);
+		void listenRequest(std::vector<struct pollfd>::iterator it);
 		void endConnection(std::vector<struct pollfd>::iterator it);
 		void findHeaderSizeAndContentLength(std::string const& buf, std::size_t & header_size, std::size_t & content_length) const;
 };

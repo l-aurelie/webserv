@@ -11,6 +11,7 @@
 #include <ctime>
 #include <dirent.h>
 #include <exception>
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -349,7 +350,6 @@ void Response::error(std::string const& status_code, std::string const& error)
 
 void Response::launchCGI(Request & request)
 {
-	int fds_in[2];
 	int fds_out[2];
 	std::stringstream ss;
 
@@ -367,10 +367,12 @@ void Response::launchCGI(Request & request)
 	std::string request_method = (std::string("REQUEST_METHOD=") + request.getMethod());
 	std::string query_string = (std::string("QUERY_STRING=") + queryString);
 	std::string content_length;
+	std::string content_type;
 
 	std::vector<const char*> env;
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
-	env.push_back("REDIRECT_STATUS=true");
+	//env.push_back("REDIRECT_STATUS=true"); // TODO: pourquoi tout le monde met 200 et nous true ?
+	env.push_back("REDIRECT_STATUS=200");	
 	env.push_back(script_filename.c_str());
 	env.push_back(request_method.c_str());
 	env.push_back(query_string.c_str());
@@ -378,31 +380,26 @@ void Response::launchCGI(Request & request)
 	//-- meta var post
 	if (request.getMethod() == "POST")
 	{
-		ss << "CONTENT_LENGTH=" << request.getBody().length();
+		ss << "CONTENT_LENGTH=" << request.getContentLength();
 		content_length = ss.str();
 		if (ss.fail())
 			return (error(INTERNAL, "cannot convert body length meta var"));
 		env.push_back(content_length.c_str());
-		env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-
-		//-- Passe le body en entree standard du cgi pour envoyer body post (redirige stdin)
-		if (pipe(fds_in) == -1)// OUVERTURE PIPE IN ====
-			return (error(INTERNAL, "pipe syscall failed"));
-		if (write(fds_in[1], request.getBody().c_str(), request.getBody().length()) == -1)
-			return (error(INTERNAL, "write syscall failed"));
-		if (close(fds_in[1]) == -1)
-			return (error(INTERNAL, "close syscall failed"));
+		content_type = "CONTENT_TYPE=" + request.getContentType();
+		env.push_back(content_type.c_str());
 	}
 	env.push_back(NULL);
 
-	//-- Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi
+	//-- Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi 
 	pid_t pid = fork();
 	if (pid == -1)
 		return (error(INTERNAL, "fork syscall failed"));
 	else if (pid == 0)
 	{
-		if (request.getMethod() == "POST" && dup2(fds_in[0], STDIN_FILENO) == -1)
-			return(error(INTERNAL, "dup2 syscall failed"));
+		//- + redirige tmpFile en entree standard pour que POST puisse prendre le body en etree standard
+		int fd_tmp_file = open(request.tmpFilename.c_str(), O_RDONLY);
+		if (dup2(fd_tmp_file, STDIN_FILENO) == -1)
+			return (error(INTERNAL, "dup2 syscall failed"));
 		if (close(fds_out[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
@@ -417,8 +414,6 @@ void Response::launchCGI(Request & request)
 		if (wait(NULL) == -1)
 			return (error(INTERNAL, "wait syscall failed"));
 		if (close(fds_out[1]) == -1)
-			return (error(INTERNAL, "close syscall failed"));
-		if (request.getMethod() == "POST" && close(fds_in[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 		//-- Recupere le retour du cgi comme reponse
 		char buf2[BUF_SIZE + 1];
@@ -447,11 +442,4 @@ void Response::launchCGI(Request & request)
 	body = "";
 	while (std::getline(ss, line))
 		body += line + '\n';
-
-	/*
-	std::cout << "--------\n";
-	std::cout << "contenttype in CGI: " << contentType << '\n';
-	std::cout << "body in CGI: " << body << '\n';
-	std::cout << "--------\n";
-	*/
 }

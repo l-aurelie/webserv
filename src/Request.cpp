@@ -1,27 +1,42 @@
 #include "Request.hpp"
 #include <algorithm>
-#include <stdint.h>
-#include <string>
-#include <sstream>
+#include <cstdlib>
+#include <unistd.h>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
-Request::Request() : headerSize(0), contentLength(0), port(80) {}
+Request::Request() : headerSize(0), headerFilled(false), contentLength(0), port(80) {
+	tmpFilename = "/tmp/webserv_XXXXXX";
+	int fd = mkstemp(&(*tmpFilename.begin()));
+	if (fd != -1)
+		close(fd);
+	this->tmpFile.open(tmpFilename.c_str(), std::fstream::out | std::fstream::in | std::fstream::binary | std::fstream::trunc);
+	if (this->tmpFile.fail())
+		std::cerr << "failed to open" << std::endl;	// TODO: error ?
+}
+
 Request::Request(Request const& rhs) { *this = rhs; }
-Request::~Request() {}
+Request::~Request() {
+	remove(tmpFilename.c_str());
+}
 
 Request& Request::operator=(Request const& rhs) {
 	if (this == &rhs)
 		return (*this);
-	this->buffer = rhs.buffer;
-	this->body = rhs.body;
+	//this->tmpFile = rhs.tmpFile;	// TODO: copy tmp file ?!
+	this->tmpFilename = rhs.tmpFilename;	// TODO: copy tmp file ?!
 	this->statusCode = rhs.statusCode;
 	this->headerSize = rhs.headerSize;
+	this->headerFilled = rhs.headerFilled;
+	this->headerBuf = rhs.headerBuf;
 
 	this->method = rhs.method;
 	this->path = rhs.path;
 	this->protocolVersion = rhs.protocolVersion;
 	this->serverName = rhs.serverName;
 	this->contentLength = rhs.contentLength;
+	this->contentType = rhs.contentType;
 	this->port = rhs.port;
 	return (*this);
 }
@@ -35,6 +50,11 @@ std::ostream & operator<<(std::ostream & os, Request const& rhs) {
 	if (rhs.getServerName().length())
 		os << "\tHost: " << rhs.getServerName() << ":" << rhs.getPort() << std::endl;
 
+	if (rhs.getContentLength())
+		os << "\tContent-Length: " << rhs.getContentLength() << std::endl;
+
+	if (!rhs.getContentType().empty())
+		os << "\tContent-Type: " << rhs.getContentType() << std::endl;
 //	if (rhs.getBody().length())
 //		os << "\tBody: " << rhs.getBody() <<  std::endl;
 
@@ -96,6 +116,15 @@ void Request::setContentLength(std::vector<std::string> & values) {
 	}
 }
 
+void Request::setContentType(std::vector<std::string> & values) {
+	for (std::vector< std::string >::iterator it = values.begin(); it != values.end(); ++it)
+	{
+		this->contentType += *it;
+		if (it != values.end() - 1)
+			this->contentType += " ";
+	}
+}
+
 /* Getter */
 
 std::string Request::getMethod() const { return (this->method); }
@@ -104,11 +133,7 @@ std::string Request::getProtocolVersion() const { return (this->protocolVersion)
 std::string Request::getServerName() const { return (this->serverName); }
 uint16_t Request::getPort() const { return (this->port); }
 std::size_t Request::getContentLength() const { return (this->contentLength); }
-std::string Request::getBody() const { return (this->body); }
-
-void	Request::setBody(){
-	body = buffer.substr(headerSize);
-}
+std::string Request::getContentType() const { return (this->contentType); }
 
 Request & Request::errorMsg(std::string statusCode, const char * err_msg){
 	this->statusCode = statusCode;

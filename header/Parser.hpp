@@ -10,7 +10,7 @@ namespace Parser
 {
 
 std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path);
-Request parseRequest(Request & request);
+Request & parseRequest(Request & request);
 std::string tolowerstr(std::string str);
 
 }

@@ -1,4 +1,4 @@
-# Prerequisites
+g Prerequisites
 *.d
 dep/
 
@@ -35,3 +35,4 @@ obj/
 webserv
 
 .vscode/
+.DS_Store

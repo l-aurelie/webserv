@@ -9,14 +9,13 @@
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <poll.h>
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
-
-std::string launchCGI(); // TODO: remove
 
 Server::Server(std::vector<Conf> confs) : confs(confs) {}
 Server::Server(Server const& rhs) { *this = rhs; }
@@ -88,56 +87,88 @@ void Server::acceptClient(void) {
 }
 
 /* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN : SON MESSAGE N'EST PAS TERMINE. ON CONTINUE DE RECV ET DE CONCATENER AVEC NOTRE STRING (attribut de requete presente dans la map msg_from_client). LA TAILLE MAXIMUM (maxBodySize/contentLength) EST PRISE EN COMPTE */
-void Server::listenRequest(int client_id) {
+void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
+	int client_id = it->fd;
+	std::cout << "server listening for client " << client_id << std::endl;
 	Request & req = msg_from_client[client_id];//define pour simplifier
 
-	std::cout << "server listening for client " << client_id << std::endl;
 	/* On  lit dans buf ce que le client nous envoie */
 	char buf[BUF_SIZE + 1];
 	int read = recv(client_id, buf, BUF_SIZE, 0);
+	if (read == 0)
+		endConnection(it);
 	if (read == -1)
 	{
 		std::cerr << "recv error" << std::endl;
-		exit (EXIT_FAILURE);
+		endConnection(it);
+		//exit (EXIT_FAILURE);
 	}
 	buf[read] = '\0';
 
-	/* Tant que le header n'est pas complet on ajoute buf a notre string de requete */
+	std::size_t pos = std::string::npos;
+	std::string tmp = buf;
+	if (!req.headerFilled)
+		pos = tmp.find("\n\r\n");
+	if (pos == std::string::npos)
+	{
+		if (!req.headerFilled)
+			req.headerBuf += tmp;
+		else
+		{
+			req.tmpFile.write(buf, read);
+			req.tmpFile.flush(); // TODO: useless ?
+		}
+	}
+	else
+	{
+		req.headerFilled = true;
+		req.headerBuf += tmp.substr(0, pos);
+		pos += 3;
+		req.tmpFile.write(&(buf[pos]), read - pos);
+		req.tmpFile.flush(); // TODO: useless ?
+	}
+	if (req.headerFilled && req.getMethod().empty())
+		req = Parser::parseRequest(req);
+	/*
+	TODO:
+	//-- Tant que le header n'est pas complet on ajoute buf a notre string de requete
 	req.headerSize = Utils::header_is_full(req.buffer);
 	if(!req.headerSize)//le header n'est pas pret a etre parse
 	{
+		fputs(buf, req.tmpFile);
 		req.buffer += buf;
 		buf[0] = '\0';
 		req.headerSize = Utils::header_is_full(req.buffer);
 	}
 
-	/* Le header est complet on parse le  header de la requete */
+	//-- Le header est complet on parse le  header de la requete
 	if (req.headerSize) // header full
 	{
 		if (req.getMethod().empty()) //condition pour parser une seule fois
 			req = Parser::parseRequest(req);
 		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
 
-		/*
-  		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
-		*/
-		/* On ajoute buf a notre string de requete tant qu'on a pas atteint content length ou maxbody */
+		//std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
+
+		//-- On ajoute buf a notre string de requete tant qu'on a pas atteint content length ou maxbody
 		if(client_max_body_size && req.buffer.length() > req.headerSize + client_max_body_size)
 			req.statusCode = TOO_LARGE;
 		else if (req.buffer.length() < req.headerSize + req.getContentLength()
 				&& (!client_max_body_size || (req.buffer.length() < req.headerSize + client_max_body_size)))//si on a pas atteint le maxbodysize ou le content length
 			req.buffer += buf;
 
-		/* Si besoin tronque la string a la taille exacte */
+		//-- Si besoin tronque la string a la taille exacte
 		if (client_max_body_size)
 			req.buffer = req.buffer.substr(0, req.headerSize + client_max_body_size);
 		req.buffer = req.buffer.substr(0, req.headerSize + req.getContentLength());
 		req.setBody();
 	}
+	*/
 }
 
 /*  ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse : poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */ 
-void Server::answerRequest(int client_id) {
+void Server::answerRequest(std::vector<struct pollfd>::iterator it) {
+	int client_id = it->fd;
 	if (msg_from_client[client_id].getPath() == "/favicon.ico")	// TODO: disable favicon.ico
 	{
 		msg_to_client[client_id] = "HTTP/1.1 404 Not Found\nServer: webserv\nContent-Length: 158\nContent-Type: text/html\n\n<!DOCTYPE html>\n<head>\n<title>404 Not Found</title>\n</head>\n<body>\n<center>\n<h1>404 Not Found</h1>\n<hr />\n<h3>webserv</h3>\n</center>\n</body>\n</html>";
@@ -149,15 +180,17 @@ void Server::answerRequest(int client_id) {
 	Response response;
 	/* Prepare la reponse */
 	//std::cout << "Request buf = |" << std::endl << msg_from_client[client_id].buffer << "|\n";
-	std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
+	//std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
 	msg_to_client[client_id] = response.prepareResponse(msg_from_client[client_id], this->confs);
 	
-	//	msg_to_client[client_id] = std::string("HTTP/1.1 301 Moved Permanently\nServer: nginx/1.18.0\nDate: Fri, 04 Feb 2022 11:28:19 GMT\nContent-Type: text/html\nContent-Length: 169\nConnection: keep-alive\nLocation: https://google.com/"); // TODO: test redirections
-	
 	/* Envoie la reponse au client */
-	std::cout << "Response: " << msg_to_client[client_id] << std::endl;
+	//std::cout << "Response: " << msg_to_client[client_id] << std::endl;
 	if (send(client_id, msg_to_client[client_id].c_str(), msg_to_client[client_id].length(), 0) <= 0)
+	{
 		std::cerr << "send error \n"; // g_error ? 
+		endConnection(it);
+	}
+	
 }
 
 /* GERE DECONNECTION, CLOSE FD, SUPPRIME REQUETE ET REPONSE CORRESPONDANTE */
@@ -173,10 +206,6 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 /* 1 SERVER ECOUTE LES DEMANDES DE CONNECTION, LES REQUETES ET ENVOIE LES REPONSE AU PREVIOUS REQUETES*/
 void Server::launch(void)
 {
-//	std::cout << "acceded in Server::launch\n";
-//	launchCGI();
-//	exit(12);
-
 	if (poll(&fds[0], fds.size(), 0) != -1)
 	{
 		/* Un client se connecte */
@@ -190,12 +219,12 @@ void Server::launch(void)
 		{ 
 			/* le client nous envoie un message */
 			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
-				listenRequest(it->fd);
+				listenRequest(it);
 
 			/* le client est pret a recevoir un message */
 			else if (it->revents == POLLOUT && msg_from_client.count(it->fd))
 			{
-				answerRequest(it->fd);
+				answerRequest(it);
 				endConnection(it);
 				break ;
 			}
