@@ -41,6 +41,7 @@ Conf & selectConf(std::vector<Conf> & confs, std::string const& server_name, std
 	return (confs[0]);
 }
 
+/*
 std::size_t header_is_full(std::string & buf) {
 	std::stringstream buffer(buf);
 	std::string line;
@@ -52,6 +53,7 @@ std::size_t header_is_full(std::string & buf) {
 	}
 	return 0;
 }
+*/
 
 
 } // namespace Utils

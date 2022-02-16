@@ -244,7 +244,7 @@ static Request & parseFields(std::stringstream & header_buf, Request & request) 
 	fields["referer"] = NULL;
 
 	std::getline(header_buf, line);//pour clear la "premiere ligne"
-	while (std::getline(header_buf, line) && line != "\r" && line != "")//tant que pas fin header_buff
+	while (std::getline(header_buf, line) && line != "\r")//tant que pas fin header_buff
 	{
 		std::vector<std::string> values;
 		//std::cout << "line = " << (int)line[0] << std::endl;

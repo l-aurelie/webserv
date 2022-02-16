@@ -36,6 +36,8 @@ class Request
 		std::size_t headerSize;
 		bool headerFilled;
 		std::string headerBuf;
+		int countContentLength;
+		int countClientMaxBodySize;
 
 	private:
 		std::string method;

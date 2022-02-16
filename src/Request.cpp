@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 
-Request::Request() : headerSize(0), headerFilled(false), contentLength(0), port(80) {
+Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), port(80) {
 	tmpFilename = "/tmp/webserv_XXXXXX";
 	int fd = mkstemp(&(*tmpFilename.begin()));
 	if (fd != -1)
@@ -30,6 +30,8 @@ Request& Request::operator=(Request const& rhs) {
 	this->headerSize = rhs.headerSize;
 	this->headerFilled = rhs.headerFilled;
 	this->headerBuf = rhs.headerBuf;
+	this->countContentLength = rhs.countContentLength;
+	this->countClientMaxBodySize = rhs.countClientMaxBodySize;
 
 	this->method = rhs.method;
 	this->path = rhs.path;

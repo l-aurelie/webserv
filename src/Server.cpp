@@ -38,7 +38,8 @@ std::vector<Conf> Server::getConfs() const { return (this->confs); }
 //================================================================//
 
 /* CREATION SOCKET SERVER, BIND, MISE EN ECOUTE AJOUT SOCKETSERV COMME PREMIER ELEMENT DU VECT<POLLFD>*/
-bool Server::initServ(int port) {
+bool Server::initServ(int port)
+{
 	std::cout << "New server on " << confs[0].listen << std::endl;
 
 	this->socketServer = socket(AF_INET, SOCK_STREAM, 0);
@@ -63,7 +64,7 @@ bool Server::initServ(int port) {
 		close(this->socketServer);
 		exit(EXIT_FAILURE);
 	}
-	/* Ajoute le socketserver comme premier element a lattribut vector<pollfd> fds */
+	//-- Ajoute le socketserver comme premier element a lattribut vector<pollfd> fds
 	struct pollfd pfd;
 	pfd.fd = getSocket();
 	pfd.events = POLLIN;
@@ -73,7 +74,8 @@ bool Server::initServ(int port) {
 }
 
 /* AJOUTER UN NOUVEAU CLIENT A L ATTRIBUT VECTOR<POLLFD> FDS */
-void Server::acceptClient(void) {
+void Server::acceptClient(void)
+{
 	struct pollfd pfd;
 	struct sockaddr_in addrClient;
 	socklen_t csize = sizeof(addrClient);
@@ -87,49 +89,97 @@ void Server::acceptClient(void) {
 }
 
 /* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN : SON MESSAGE N'EST PAS TERMINE. ON CONTINUE DE RECV ET DE CONCATENER AVEC NOTRE STRING (attribut de requete presente dans la map msg_from_client). LA TAILLE MAXIMUM (maxBodySize/contentLength) EST PRISE EN COMPTE */
-void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
+void Server::listenRequest(std::vector<struct pollfd>::iterator it)
+{
 	int client_id = it->fd;
 	std::cout << "server listening for client " << client_id << std::endl;
 	Request & req = msg_from_client[client_id];//define pour simplifier
 
-	/* On  lit dans buf ce que le client nous envoie */
+	//-- On  lit dans buf ce que le client nous envoie, la taille lue dans read
 	char buf[BUF_SIZE + 1];
-	int read = recv(client_id, buf, BUF_SIZE, 0);
+	int read = recv(client_id, buf, BUF_SIZE - 1, 0);
 	if (read == 0)
+	{
+		std::cerr << "recv returned 0" << std::endl;
 		endConnection(it);
+	}
 	if (read == -1)
 	{
 		std::cerr << "recv error" << std::endl;
 		endConnection(it);
-		//exit (EXIT_FAILURE);
 	}
 	buf[read] = '\0';
 
-	std::size_t pos = std::string::npos;
+	//-- Cherche la fin du header
 	std::string tmp = buf;
+	std::size_t pos = std::string::npos;
 	if (!req.headerFilled)
-		pos = tmp.find("\n\r\n");
+		pos = tmp.find("\n\r\n") + 1;
 	if (pos == std::string::npos)
 	{
+		//- Soit ajoute buf a la string headerBuf si header non complet
 		if (!req.headerFilled)
 			req.headerBuf += tmp;
+		//- Soit ajoute buf au body tmpFile
 		else
 		{
-			req.tmpFile.write(buf, read);
-			req.tmpFile.flush(); // TODO: useless ?
+			if (req.countClientMaxBodySize > 0 && read > req.countClientMaxBodySize && req.countClientMaxBodySize <= req.countContentLength)
+			{
+				req.statusCode = TOO_LARGE;
+				req.countContentLength = 0;
+			}
+			else if (read > req.countContentLength)
+			{
+				req.tmpFile.write(buf, req.countContentLength);
+				req.countContentLength = 0;
+			}
+			else
+			{
+				req.tmpFile.write(buf, read);
+				req.countContentLength -= read;
+				req.countClientMaxBodySize -= read;
+			}
+			req.tmpFile.flush();
 		}
 	}
+	//-- Sur la ligne de fin du header, on divise buf entre respectivement la fin du header et le tmpFile body
 	else
 	{
 		req.headerFilled = true;
 		req.headerBuf += tmp.substr(0, pos);
-		pos += 3;
-		req.tmpFile.write(&(buf[pos]), read - pos);
-		req.tmpFile.flush(); // TODO: useless ?
+		//- Le header est complet, on parse le requete (1 seule fois)
+		req = Parser::parseRequest(req);
+		req.countContentLength = req.getContentLength();
+		req.countClientMaxBodySize = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
+		pos += 2;
+		read -= pos;
+		if (req.countClientMaxBodySize > 0 && read > req.countClientMaxBodySize && req.countClientMaxBodySize <= req.countContentLength)
+		{
+			req.statusCode = TOO_LARGE;
+			req.countContentLength = 0;
+		}
+		else if (read > req.countContentLength)
+		{
+			req.tmpFile.write(&(buf[pos]), req.countContentLength);
+			req.countContentLength = 0;
+		}
+		else
+		{
+			req.tmpFile.write(&(buf[pos]), read);
+			req.countContentLength -= read;
+			req.countClientMaxBodySize -= read;
+		}
+		req.tmpFile.flush();
 	}
+	//-- Le header est complet, on parse le requete (1 seule fois)
+	/*
 	if (req.headerFilled && req.getMethod().empty())
 		req = Parser::parseRequest(req);
+		*/
+
 	/*
+	std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
+	req.getContentLength()
 	TODO:
 	//-- Tant que le header n'est pas complet on ajoute buf a notre string de requete
 	req.headerSize = Utils::header_is_full(req.buffer);
@@ -167,7 +217,8 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator it) {
 }
 
 /*  ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse : poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */ 
-void Server::answerRequest(std::vector<struct pollfd>::iterator it) {
+void Server::answerRequest(std::vector<struct pollfd>::iterator it)
+{
 	int client_id = it->fd;
 	if (msg_from_client[client_id].getPath() == "/favicon.ico")	// TODO: disable favicon.ico
 	{
@@ -203,7 +254,7 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 	fds.erase(it);
 }
 
-/* 1 SERVER ECOUTE LES DEMANDES DE CONNECTION, LES REQUETES ET ENVOIE LES REPONSE AU PREVIOUS REQUETES*/
+/* 1 SERVER ECOUTE LES DEMANDES DE CONNECTION, LES REQUETES ET ENVOIE LES REPONSES AUX PRECEDENTES REQUETES*/
 void Server::launch(void)
 {
 	if (poll(&fds[0], fds.size(), 0) != -1)
@@ -217,11 +268,11 @@ void Server::launch(void)
 
 		for (std::vector<struct pollfd>::iterator it = fds.begin() + 1; it != fds.end(); it++)
 		{ 
-			/* le client nous envoie un message */
+			/* un client nous envoie un message */
 			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
 				listenRequest(it);
 
-			/* le client est pret a recevoir un message */
+			/* un client est pret a recevoir un message */
 			else if (it->revents == POLLOUT && msg_from_client.count(it->fd))
 			{
 				answerRequest(it);
@@ -230,8 +281,8 @@ void Server::launch(void)
 			}
 			
 			/* le client se deconnecte */
-			//else if (it->revents & POLLERR || it->revents & POLLRDHUP)
 			else if (it->revents & POLLERR)
+			//else if (it->revents & POLLERR || it->revents & POLLRDHUP)
 			{
 				endConnection(it);
 				break ;

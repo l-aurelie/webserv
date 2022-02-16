@@ -72,33 +72,37 @@ void Response::constructPath(Request &request, Conf const &conf)
 			}
 		}
 	}
-	bzero(&infos, sizeof(infos));
-	//-- gere autoindex
+	bzero(&infos, sizeof(infos));//reset stat info
+	//-- Gere AUTOINDEX
 	if(!path.empty() && path[path.length() - 1] == '/' && conf.autoindex)
 	{
 		autoIndex(path, conf.root);
 		path = "";
 		return ;
 	}
-	//-- gere les erreurs de stats du fichier demande
+	//-- Gere les erreurs de stats du fichier demande
+	//- N'existe pas
 	else if (stat(path.c_str(), &infos) == -1 && !(infos.st_mode & S_IFDIR))
 	{
 		statusCode = NOT_FOUND;
 		path = "";
 		return;
 	}
+	//- Redirige les paths de dossiers ne se finissant pas par / ex : toto >> toto/
 	else if (infos.st_mode & S_IFDIR	// si dossier
 		&& request.getPath().find("?") == std::string::npos // si pas de queryString
 		&& request.getPath()[request.getPath().length() - 1] != '/')	// si ne se termine pas par un /
 	{
 		redirected(301, request.getPath() + "/");
 	}
+	//- Pas droits d'acces
 	else if (infos.st_mode & S_IFDIR || !(infos.st_mode & S_IRUSR))
 	{
 		statusCode = FORBIDDEN;
 		path = "";
 		return;
 	}
+	//-- Recupere heure de derniere modification
 	else
 	{
 		struct tm * timeinfo = localtime(&infos.st_mtime);
@@ -111,9 +115,9 @@ void Response::constructPath(Request &request, Conf const &conf)
 /* PREPARE LA REPONSE POUR LES CAS D'ERREUR (REMPLI LE BODY AVEC LA PAGE D'ERREUR CORRESPONDANTE au status code,  rempli le header) LA RENVOIE FORMATEE EN STRING */
 std::string Response::errorFillResponse(std::string code, Conf & conf)
 {
+	//-- Recupere code erreur et le verifie
 	std::stringstream ss;
 	int error_code;
-
 	ss << code;
 	ss >> error_code;
 	if (!std::isdigit(code[0]) || ss.fail())
@@ -124,10 +128,9 @@ std::string Response::errorFillResponse(std::string code, Conf & conf)
 	ss.str("");
 	ss.clear();
 
+	//-- Choisit page erreur  de la conf ou 
 	if (conf.errorPages.count(error_code))
-	{
 		path = conf.root + "/" + conf.errorPages[error_code];
-	}
 	else
 	{
 		ss << "./error_pages/" << error_code << ".html";
@@ -136,6 +139,7 @@ std::string Response::errorFillResponse(std::string code, Conf & conf)
 		ss.clear();
 	}
 
+	//--
 	std::ifstream f(path.c_str());
 	ss << f.rdbuf();
 	body = ss.str();
@@ -189,7 +193,7 @@ std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs
 	/* Gere les erreurs presentes en amont */
 	if (!request.statusCode.empty())
 		return (errorFillResponse(request.statusCode, conf));
-	/* Gere method not allowed */	
+	/* Gere method not allowed */
 	if (std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
 		return (errorFillResponse(METHOD_NOT_ALLOWED, conf));
 	/* Gere les redirection */
@@ -390,7 +394,7 @@ void Response::launchCGI(Request & request)
 	}
 	env.push_back(NULL);
 
-	//-- Exec php-cgi : fork, redirige stdout pour recuperer la reponse cgi, execve cgi 
+	//-- EXEC PHP-CGI : fork, redirige stdout pour recuperer la reponse cgi, execve cgi 
 	pid_t pid = fork();
 	if (pid == -1)
 		return (error(INTERNAL, "fork syscall failed"));
@@ -400,10 +404,12 @@ void Response::launchCGI(Request & request)
 		int fd_tmp_file = open(request.tmpFilename.c_str(), O_RDONLY);
 		if (dup2(fd_tmp_file, STDIN_FILENO) == -1)
 			return (error(INTERNAL, "dup2 syscall failed"));
+		//- redirige stdout pour recuperer la reponse du cgi
 		if (close(fds_out[0]) == -1)
 			return (error(INTERNAL, "close syscall failed"));
 		if (dup2(fds_out[1], STDOUT_FILENO) == -1)
 			return (error(INTERNAL, "dup2 syscall failed"));
+		//- se place dans le bon directory et exec php cgi
 		if (chdir(path.substr(0, path.rfind("/") - 1).c_str()) == -1)
 			return (error(NOT_FOUND, "chdir syscall failed"));
 		if (execve(*args.begin(), (char* const*)&(*args.begin()), (char* const*)&(*env.begin())) == -1)
@@ -431,15 +437,16 @@ void Response::launchCGI(Request & request)
 
 	//-- Formate reponse cgi
 	contentType = body.substr(body.find("Content-type: ") + 14, std::string::npos); //ligne contenttype
-	contentType = contentType.substr(0, contentType.find("\n"));// valeur contenttype
+	contentType = contentType.substr(0, contentType.find("\r\n"));// valeur contenttype
 
 	ss.str("");
 	ss.clear();
 	ss << body;
 	std::string line;
-	while (std::getline(ss, line) && line != "" && line != "\r") 
+	//while (std::getline(ss, line) && line != "" && line != "\r") 
+	while (std::getline(ss, line) && line != "\r")
 		;
 	body = "";
 	while (std::getline(ss, line))
-		body += line + '\n';
+		body += line + "\r\n";
 }

@@ -1,2 +1,6 @@
-POST /index.html HTTP/1.1
+POST /phpinfo.php HTTP/1.1
 Host: localhost:6500
+Content-Length: 17
+Content-Type: application/x-www-form-urlencoded
+
+antoine=h111111111111111111111111111133333h

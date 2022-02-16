@@ -62,9 +62,10 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] utiliser autoindex
 	- [x] 301 request if file is folder to folder/
 	- [ ] upload fichier
-		- [ ] handle client_max_body_size
-		- [ ] handle content-length
-	- [ ] download fichier
+		- [x] handle client_max_body_size
+		- [x] handle content-length
+		- [ ] upload.php script
+	- [x] download fichier
 - [ ] CGI
 	- [x] C'est quoi ?
 	- [x] Faire requete GET dans le terminal
@@ -80,7 +81,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [ ] unchunck request
 - [ ] clean
 	- [ ] deplacer dans utils
-
+	- [ ] decouper les fonctions
 - [ ] proteger les fichiers elementaires
 
 ## Fix
