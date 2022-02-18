@@ -40,13 +40,13 @@ class Request
 		std::string headerBuf;
 		int countContentLength;
 		int countClientMaxBodySize;
+		std::size_t contentLength;
 
 	private:
 		std::string method;
 		std::string path;
 		std::string protocolVersion;
 		std::string serverName;
-		std::size_t contentLength;
 		std::string contentType;
 		bool chunked;
 		uint16_t port;

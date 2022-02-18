@@ -244,6 +244,7 @@ static Request & parseFields(std::stringstream & header_buf, Request & request)
 	fields["sec-fetch-mode"] = NULL;
 	fields["sec-fetch-site"] = NULL;
 	fields["sec-fetch-user"] = NULL;
+	fields["postman-token"] = NULL;
 
 	fields["referer"] = NULL;
 

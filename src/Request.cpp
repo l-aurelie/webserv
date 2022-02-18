@@ -19,7 +19,7 @@ Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), 
 
 Request::Request(Request const& rhs) { *this = rhs; }
 Request::~Request() {
-	remove(tmpFilename.c_str());
+//	remove(tmpFilename.c_str());
 }
 
 Request& Request::operator=(Request const& rhs) {

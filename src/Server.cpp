@@ -192,6 +192,7 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator it)
 						exit(EXIT_FAILURE);	// TODO:
 					}
 					std::cerr << "found countContentLength is " << req.countContentLength << std::endl;
+					req.contentLength += req.countContentLength;
 					if (req.countContentLength == 0)
 						req.countContentLength = -1;
 				}

@@ -137,3 +137,52 @@ Cache-Control: no-cache
 TE: trailers
 
 title=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&info=&allergens=&unitPrice=&unitUnity=&lotPrice=&lotUnity=&add=added
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+POST /phpinfo.php HTTP/1.1
+Host: localhost:6500
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------1027298611217122479475456800
+Content-Length: 12872
+Origin: http://localhost:6500
+Connection: keep-alive
+Referer: http://localhost:6500/
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+Pragma: no-cache
+Cache-Control: no-cache
+
+-----------------------------1027298611217122479475456800
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+2500000
+-----------------------------1027298611217122479475456800
+Content-Disposition: form-data; name="text"
+
+aaaaaa
+-----------------------------1027298611217122479475456800
+Content-Disposition: form-data; name="userfile"; filename="img.jpeg"
+Content-Type: image/jpeg
+
+����j3]M.��$�L�ڋ�֨Ɖ$��_�dn�<qKe�x��k]�K��4v;����$�������漊4��zu�Y$��_A�BQƹvy��-tJBDʈ�p�2=6��3�������
+               I�9�UQ���i�1��J�Q�iq�F9i�:���z��ֹ��
+                                                 &��ͤuAd�ӛ�7�[���kT��e���#��K��  �-O��5�#�Y��N�ɖ�'ޗ�������T䠩        &ݗ��d��dw�U�.�E�>���q�:��%�b
+�sXՑ�"y���f����o.
+                 eTV�?�ͽ�MNF�ƨ���L�)��,0� �d��i�ya$�9,JUc'
+ɺ�Oy7:VZ�^e�?+>�b��q�냨�                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+-----------------------------1027298611217122479475456800
+Content-Disposition: form-data; name="send"
+
+send
+-----------------------------1027298611217122479475456800--
