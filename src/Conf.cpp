@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <vector>
 
-Conf::Conf(void) : listen(0), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) {}
+Conf::Conf(void) : listen(80), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) {}
 
 Conf::Conf(Conf const& rhs) { *this = rhs; }
 

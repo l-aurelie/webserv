@@ -1,4 +1,5 @@
 #include "Request.hpp"
+#include "Parser.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <unistd.h>
@@ -39,6 +40,7 @@ Request& Request::operator=(Request const& rhs) {
 	this->serverName = rhs.serverName;
 	this->contentLength = rhs.contentLength;
 	this->contentType = rhs.contentType;
+	this->chunked = rhs.chunked;
 	this->port = rhs.port;
 	return (*this);
 }
@@ -59,6 +61,9 @@ std::ostream & operator<<(std::ostream & os, Request const& rhs) {
 		os << "\tContent-Type: " << rhs.getContentType() << std::endl;
 //	if (rhs.getBody().length())
 //		os << "\tBody: " << rhs.getBody() <<  std::endl;
+
+	if (rhs.getChunked())
+		os << "\tTransfer-Encoding: chunked" << std::endl;
 
 //	os << "\tstatus: " << rhs.errorMsg() << std::endl;
 	return (os);
@@ -127,6 +132,18 @@ void Request::setContentType(std::vector<std::string> & values) {
 	}
 }
 
+void Request::setTransferEncoding(std::vector<std::string> & values) {
+	if (values.size() != 1)
+	{
+		std::cerr << "error: request : 'Transfer-Encoding' can have at most 1 value" << std::endl;
+		exit(EXIT_FAILURE);	// TODO: error response
+	}
+	if (Parser::tolowerstr(values[0]) == "chunked")
+		this->chunked = true;
+	else
+		this->chunked = false;
+}
+
 /* Getter */
 
 std::string Request::getMethod() const { return (this->method); }
@@ -136,6 +153,7 @@ std::string Request::getServerName() const { return (this->serverName); }
 uint16_t Request::getPort() const { return (this->port); }
 std::size_t Request::getContentLength() const { return (this->contentLength); }
 std::string Request::getContentType() const { return (this->contentType); }
+bool Request::getChunked() const { return (this->chunked); }
 
 Request & Request::errorMsg(std::string statusCode, const char * err_msg){
 	this->statusCode = statusCode;

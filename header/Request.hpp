@@ -20,6 +20,7 @@ class Request
 		uint16_t getPort() const;
 		std::size_t getContentLength() const;
 		std::string getContentType() const;
+		bool getChunked() const;
 
 		void setMethod(std::string method);
 		void setPath(std::string path);
@@ -27,8 +28,9 @@ class Request
 		void setHost(std::vector<std::string> & values);
 		void setContentLength(std::vector<std::string> & values);
 		void setContentType(std::vector<std::string> & values);
+		void setTransferEncoding(std::vector< std::string >& values);
 
-		Request & errorMsg(std::string statusCode, const char * err_msg);
+		Request& errorMsg(std::string statusCode, const char* err_msg);
 
 		std::fstream tmpFile;
 		std::string tmpFilename;
@@ -46,7 +48,8 @@ class Request
 		std::string serverName;
 		std::size_t contentLength;
 		std::string contentType;
+		bool chunked;
 		uint16_t port;
 };
 
-std::ostream & operator<<(std::ostream & os, Request const& rhs);
+std::ostream& operator<<(std::ostream& os, Request const& rhs);

@@ -264,7 +264,8 @@ void Response::deleteFile(Request &request, Conf const &conf)
 	struct stat infos;
 	/* Recupere et verifie le path */
 	std::string path = conf.root + "/" + request.getPath();
-	if (stat(path.c_str(), &infos) == -2)
+	std::cout << path << std::endl;
+	if (stat(path.c_str(), &infos) == -1)
 	{
 		statusCode = NOT_FOUND;
 		return;

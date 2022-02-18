@@ -203,7 +203,8 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path)
 	return (confs);
 }
 
-std::string tolowerstr(std::string str){
+std::string tolowerstr(std::string & str)
+{
 	std::string ans;
 	for (size_t i = 0; i < str.length(); i++){
 		ans.append(1, tolower(str[i]));
@@ -212,7 +213,8 @@ std::string tolowerstr(std::string str){
 }
 
 //TODO: parse plusieurs line
-static Request & parseFields(std::stringstream & header_buf, Request & request) {
+static Request & parseFields(std::stringstream & header_buf, Request & request)
+{
 	std::string word;
 	std::string line;
 	std::string key;
@@ -222,12 +224,14 @@ static Request & parseFields(std::stringstream & header_buf, Request & request) 
 	fields["host"] = &Request::setHost;
 	fields["content-length"] = &Request::setContentLength;
 	fields["content-type"] = &Request::setContentType;
+	fields["transfer-encoding"] = &Request::setTransferEncoding;
 	fields["user-agent"] = NULL;
 
 	fields["origin"] = NULL;
 
 	fields["connection"] = NULL;
 	fields["pragma"] = NULL;
+	fields["if-modified-since"] = NULL;
 	fields["cache-control"] = NULL;
 
 	fields["accept"] = NULL;
@@ -311,7 +315,8 @@ static Request & parseFields(std::stringstream & header_buf, Request & request) 
 }
 */
 
-Request & parseRequest(Request & request){
+Request & parseRequest(Request & request)
+{
 	std::stringstream ss(request.headerBuf);
 	std::string buf;
 

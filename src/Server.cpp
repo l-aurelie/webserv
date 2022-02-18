@@ -88,6 +88,28 @@ void Server::acceptClient(void)
 	std::cout << "New client " << pfd.fd << " arrived" << std::endl;
 }
 
+void Server::writeInTMPFile(Request & req, char *buf, int read)
+{
+	if (req.countClientMaxBodySize > 0 && read > req.countClientMaxBodySize && req.countClientMaxBodySize <= req.countContentLength)//depasse le client_max_body_size
+	{
+		req.statusCode = TOO_LARGE;
+		req.countContentLength = 0;
+	}
+	else if (read > req.countContentLength)//depasse contentlength
+	{
+		req.tmpFile.write(buf, req.countContentLength);
+		req.tmpFile.flush();
+		req.countContentLength = 0;
+	}
+	else
+	{
+		req.tmpFile.write(buf, read);
+		req.tmpFile.flush();
+		req.countContentLength -= read;
+		req.countClientMaxBodySize -= read;
+	}
+}
+
 /* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN : SON MESSAGE N'EST PAS TERMINE. ON CONTINUE DE RECV ET DE CONCATENER AVEC NOTRE STRING (attribut de requete presente dans la map msg_from_client). LA TAILLE MAXIMUM (maxBodySize/contentLength) EST PRISE EN COMPTE */
 void Server::listenRequest(std::vector<struct pollfd>::iterator it)
 {
@@ -97,7 +119,7 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator it)
 
 	//-- On  lit dans buf ce que le client nous envoie, la taille lue dans read
 	char buf[BUF_SIZE + 1];
-	int read = recv(client_id, buf, BUF_SIZE - 1, 0);
+	int read = recv(client_id, buf, BUF_SIZE, 0);
 	if (read == 0)
 	{
 		std::cerr << "recv returned 0" << std::endl;
@@ -109,117 +131,131 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator it)
 		endConnection(it);
 	}
 	buf[read] = '\0';
+	std::cerr << "buf |" << std::endl;
+	write(STDERR_FILENO, buf, read);
+	std::cerr << "|" << std::endl;
 
 	//-- Cherche la fin du header
 	std::string tmp = buf;
 	std::size_t pos = std::string::npos;
 	if (!req.headerFilled)
 		pos = tmp.find("\n\r\n") + 1;
-	if (pos == std::string::npos)
+	if (pos == std::string::npos && !req.getChunked()) // cas non chunked
 	{
 		//- Soit ajoute buf a la string headerBuf si header non complet
 		if (!req.headerFilled)
 			req.headerBuf += tmp;
 		//- Soit ajoute buf au body tmpFile
 		else
-		{
-			if (req.countClientMaxBodySize > 0 && read > req.countClientMaxBodySize && req.countClientMaxBodySize <= req.countContentLength)
-			{
-				req.statusCode = TOO_LARGE;
-				req.countContentLength = 0;
-			}
-			else if (read > req.countContentLength)
-			{
-				req.tmpFile.write(buf, req.countContentLength);
-				req.countContentLength = 0;
-			}
-			else
-			{
-				req.tmpFile.write(buf, read);
-				req.countContentLength -= read;
-				req.countClientMaxBodySize -= read;
-			}
-			req.tmpFile.flush();
-		}
+			writeInTMPFile(req, buf, read);
 	}
-	//-- Sur la ligne de fin du header, on divise buf entre respectivement la fin du header et le tmpFile body
-	else
+	else //-- curseur sur la ligne de fin du header OU au debut de chunked
 	{
-		req.headerFilled = true;
-		req.headerBuf += tmp.substr(0, pos);
-		//- Le header est complet, on parse le requete (1 seule fois)
-		req = Parser::parseRequest(req);
-		req.countContentLength = req.getContentLength();
-		req.countClientMaxBodySize = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
-		pos += 2;
-		read -= pos;
-		if (req.countClientMaxBodySize > 0 && read > req.countClientMaxBodySize && req.countClientMaxBodySize <= req.countContentLength)
+		if (pos != std::string::npos) //- Curseur a la ligne de fin du header
 		{
-			req.statusCode = TOO_LARGE;
-			req.countContentLength = 0;
-		}
-		else if (read > req.countContentLength)
-		{
-			req.tmpFile.write(&(buf[pos]), req.countContentLength);
-			req.countContentLength = 0;
-		}
-		else
-		{
-			req.tmpFile.write(&(buf[pos]), read);
-			req.countContentLength -= read;
-			req.countClientMaxBodySize -= read;
-		}
-		req.tmpFile.flush();
-	}
-	//-- Le header est complet, on parse le requete (1 seule fois)
-	/*
-	if (req.headerFilled && req.getMethod().empty())
-		req = Parser::parseRequest(req);
-		*/
-
-	/*
-	std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
-	req.getContentLength()
-	TODO:
-	//-- Tant que le header n'est pas complet on ajoute buf a notre string de requete
-	req.headerSize = Utils::header_is_full(req.buffer);
-	if(!req.headerSize)//le header n'est pas pret a etre parse
-	{
-		fputs(buf, req.tmpFile);
-		req.buffer += buf;
-		buf[0] = '\0';
-		req.headerSize = Utils::header_is_full(req.buffer);
-	}
-
-	//-- Le header est complet on parse le  header de la requete
-	if (req.headerSize) // header full
-	{
-		if (req.getMethod().empty()) //condition pour parser une seule fois
+			//- Rempli la fin du header
+			req.headerFilled = true;
+			req.headerBuf += tmp.substr(0, pos);
+			//- Le header est complet, on parse le requete
 			req = Parser::parseRequest(req);
-		std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size grace a la conf
-
-		//std::size_t const client_max_body_size = Utils::selectConf(this->confs, req.getServerName()).getClientMaxBodySize();//trouver max_body_size grace a la conf
-
-		//-- On ajoute buf a notre string de requete tant qu'on a pas atteint content length ou maxbody
-		if(client_max_body_size && req.buffer.length() > req.headerSize + client_max_body_size)
-			req.statusCode = TOO_LARGE;
-		else if (req.buffer.length() < req.headerSize + req.getContentLength()
-				&& (!client_max_body_size || (req.buffer.length() < req.headerSize + client_max_body_size)))//si on a pas atteint le maxbodysize ou le content length
-			req.buffer += buf;
-
-		//-- Si besoin tronque la string a la taille exacte
-		if (client_max_body_size)
-			req.buffer = req.buffer.substr(0, req.headerSize + client_max_body_size);
-		req.buffer = req.buffer.substr(0, req.headerSize + req.getContentLength());
-		req.setBody();
+			req.countClientMaxBodySize = Utils::selectConf(this->confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size
+			pos += 2; //- sauter la ligne vide separatrice entre les header et le body
+			read -= pos; //- read: le nb de characters du body dans le buf
+		}
+		else //- debut de nouveau msg Chunked
+			pos = 0;
+		char * body_buf = &(buf[pos]); //debut du body jusqu a fin de buf
+		pos = 0; // debut du body_buf
+		if (!req.getChunked()) //- Non chunked et fin header : ecrit la partie body dans fichier
+		{
+			req.countContentLength = req.getContentLength();
+			writeInTMPFile(req, body_buf, read);
+		}
+		else if (req.getChunked())
+		{
+			while (pos != static_cast<std::size_t>(read))	// tant que pas fin du buf
+			{
+				//-- Parse le hexa content length
+				if (req.countContentLength == 0)
+				{
+					std::stringstream ss;
+					std::string hex(body_buf + pos);
+					hex = hex.substr(0, hex.find("\r\n"));
+					std::cerr << "hex to convert is " << hex << "]" << std::endl;
+					pos += hex.length(); //avance pos apres le hexa\r\n
+//					std::cout << "(182) pos[" << pos << "] = " << body_buf[pos] << std::endl;
+					ss << std::hex << hex;
+					ss >> req.countContentLength;
+					if (ss.fail())
+					{
+						std::cerr << "cannot convert content length from hexa" << std::endl;
+						exit(EXIT_FAILURE);	// TODO:
+					}
+					std::cerr << "found countContentLength is " << req.countContentLength << std::endl;
+					if (req.countContentLength == 0)
+						req.countContentLength = -1;
+				}
+				if (static_cast<int>(pos) < read && req.countContentLength){
+					if (std::string(body_buf + pos).find("\r") == 0)
+						pos += 1;
+					if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
+						pos += 1;
+				}
+				if (static_cast<int>(pos) < read && req.countContentLength == -1) {
+					if (std::string(body_buf + pos).find("\r") == 0)
+						pos += 1;
+					if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
+						break ;
+				}
+				if (req.countClientMaxBodySize > 0 && req.countContentLength >= req.countClientMaxBodySize) // si somme de countContentLength a atteint countClientMaxBodySize
+				{
+					req.statusCode = TOO_LARGE;
+					break ;
+				}
+				else if (req.countContentLength > 0 && req.countContentLength < read - static_cast<int>(pos))//read trop grand on ecrit juste content length on a fini ce chunk content length = 0
+				{
+					std::cout << "(198) pos[" << pos << "] = " << body_buf[pos] << std::endl;
+					std::cout << "len: " << req.countContentLength << std::endl;
+					req.tmpFile.write(body_buf + pos, req.countContentLength);
+					req.tmpFile.flush();
+					std::cerr << "writing |" << std::endl;
+					write(STDERR_FILENO, body_buf + pos, req.countContentLength);
+					std::cerr << "|" << std::endl;
+					pos += req.countContentLength;
+					if (static_cast<int>(pos) + 2 < read)	// skip \r\n of end of text line
+						pos += 2;
+					if (req.countClientMaxBodySize > 0)
+						req.countClientMaxBodySize -= req.countContentLength; // ContentLength always > ClientMaxBodySize, because checked at the above if condition
+					req.countContentLength = 0;
+				}
+				else // Notre message est separe car notre buffer est trop petit
+				{
+					//on met toute la fin du buffer dans le fichier
+//					std::cout << "(207) pos[" << pos << "] = " << body_buf[pos] << std::endl;
+//					std::cout << "read - pos: " << read - pos << std::endl;
+					req.tmpFile.write(body_buf + pos, read - pos);	// TODO: remove lasts \r\n0\r\n\r\n
+					req.tmpFile.flush();
+					std::cerr << "writing |" << std::endl;
+					write(STDERR_FILENO, body_buf + pos, read - pos);	// TODO: remove lasts \r\n0\r\n\r\n
+					std::cerr << "|" << std::endl;
+					req.countContentLength -= read - pos;
+					if (req.countClientMaxBodySize > 0)
+						req.countClientMaxBodySize -= read - pos;
+					pos = read; // stopper la boucle while
+				}
+				std::cerr << "after writing, counContentLength is " << req.countContentLength << std::endl;
+//				std::cout << "after writing pos[" << pos << "] = " << body_buf[pos] << std::endl;
+				std::cerr << "after writing, read is " << read << std::endl;
+			}
+		}
 	}
-	*/
 }
 
 /*  ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse : poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */ 
 void Server::answerRequest(std::vector<struct pollfd>::iterator it)
 {
 	int client_id = it->fd;
+	/*
 	if (msg_from_client[client_id].getPath() == "/favicon.ico")	// TODO: disable favicon.ico
 	{
 		msg_to_client[client_id] = "HTTP/1.1 404 Not Found\nServer: webserv\nContent-Length: 158\nContent-Type: text/html\n\n<!DOCTYPE html>\n<head>\n<title>404 Not Found</title>\n</head>\n<body>\n<center>\n<h1>404 Not Found</h1>\n<hr />\n<h3>webserv</h3>\n</center>\n</body>\n</html>";
@@ -227,11 +263,12 @@ void Server::answerRequest(std::vector<struct pollfd>::iterator it)
 			std::cerr << "send error \n"; // g_error ? 
 		return ;
 	}
+	*/
 
 	Response response;
 	/* Prepare la reponse */
 	//std::cout << "Request buf = |" << std::endl << msg_from_client[client_id].buffer << "|\n";
-	//std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
+	std::cout << "Request = |" << std::endl << msg_from_client[client_id] << "|\n";
 	msg_to_client[client_id] = response.prepareResponse(msg_from_client[client_id], this->confs);
 	
 	/* Envoie la reponse au client */
