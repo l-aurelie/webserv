@@ -1,32 +1,35 @@
 #include "Request.hpp"
 #include "Parser.hpp"
+#include "Utils.hpp"
+#include "webserv.hpp"
+
 #include <algorithm>
 #include <cstdlib>
-#include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 
-Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), port(80) {
+Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), port(80)
+{
 	tmpFilename = "/tmp/webserv_XXXXXX";
 	int fd = mkstemp(&(*tmpFilename.begin()));
 	if (fd != -1)
 		close(fd);
 	this->tmpFile.open(tmpFilename.c_str(), std::fstream::out | std::fstream::in | std::fstream::binary | std::fstream::trunc);
-	if (this->tmpFile.fail())
-		std::cerr << "failed to open" << std::endl;	// TODO: error ?
 }
 
 Request::Request(Request const& rhs) { *this = rhs; }
-Request::~Request() {
-//	remove(tmpFilename.c_str());
+Request::~Request()
+{
+	remove(tmpFilename.c_str());
 }
 
-Request& Request::operator=(Request const& rhs) {
+Request& Request::operator=(Request const& rhs)
+{
 	if (this == &rhs)
 		return (*this);
-	//this->tmpFile = rhs.tmpFile;	// TODO: copy tmp file ?!
-	this->tmpFilename = rhs.tmpFilename;	// TODO: copy tmp file ?!
+	this->tmpFilename = rhs.tmpFilename;
 	this->statusCode = rhs.statusCode;
 	this->headerSize = rhs.headerSize;
 	this->headerFilled = rhs.headerFilled;
@@ -45,7 +48,8 @@ Request& Request::operator=(Request const& rhs) {
 	return (*this);
 }
 
-std::ostream & operator<<(std::ostream & os, Request const& rhs) {
+std::ostream & operator<<(std::ostream & os, Request const& rhs)
+{
 	os << "Request:" << std::endl;
 	os << "\tmethod: " << rhs.getMethod() << std::endl;
 	os << "\tpath: " << rhs.getPath() << std::endl;
@@ -59,27 +63,26 @@ std::ostream & operator<<(std::ostream & os, Request const& rhs) {
 
 	if (!rhs.getContentType().empty())
 		os << "\tContent-Type: " << rhs.getContentType() << std::endl;
-//	if (rhs.getBody().length())
-//		os << "\tBody: " << rhs.getBody() <<  std::endl;
 
 	if (rhs.getChunked())
 		os << "\tTransfer-Encoding: chunked" << std::endl;
 
-//	os << "\tstatus: " << rhs.errorMsg() << std::endl;
 	return (os);
 }
+
+//================================================================//
 /* Setter */
 
 void Request::setMethod(std::string method) { this->method = method; }
 void Request::setPath(std::string path) { this->path = path; }
 void Request::setProtocolVersion(std::string protocolVersion) { this->protocolVersion = protocolVersion; }
-void Request::setHost(std::vector<std::string> & values) {
+void Request::setHost(std::vector<std::string> & values)
+{
 	if (values.size() != 1)
 	{
-		std::cerr << "error: request : 'Host' accepts only one host" << std::endl;
-		exit(EXIT_FAILURE);	// TODO: error response
+		errorMsg(BAD_REQUEST, "'Host' accepts only one host");
+		return ;
 	}
-//	std::cout << "values[0] = " << values[0] << std::endl;
 	std::string delimiter = ":";
 	std::size_t colon_position = values[0].find(delimiter);
 	if (colon_position == values[0].npos)	// if no ':' then port is 80 by default
@@ -92,38 +95,40 @@ void Request::setHost(std::vector<std::string> & values) {
 	std::stringstream ss(values[0].substr(colon_position + delimiter.length()));
 	if (!std::isdigit(ss.str()[0]))
 	{
-		std::cerr << "error: request : 'Host' port should be between 0 and 65535" << std::endl;
-		exit(EXIT_FAILURE);// TODO: error response
+		errorMsg(BAD_REQUEST, "'Host' port should be between 0 and 65535");
+		return ;
 	}
 	ss >> this->port;
 	if (ss.fail())
 	{
-		std::cerr << "error: request : 'Host' port should be between 0 and 65535" << std::endl;
-		exit(EXIT_FAILURE);	// TODO: error response
+		errorMsg(BAD_REQUEST, "'Host' port should be between 0 and 65535");
+		return ;
 	}
 }
 
-void Request::setContentLength(std::vector<std::string> & values) {
+void Request::setContentLength(std::vector<std::string> & values)
+{
 	if (values.size() != 1)
 	{
-		std::cerr << "error: request : 'Content-Length' accepts only one number" << std::endl;
-		exit(EXIT_FAILURE);	// TODO: error response
+		errorMsg(BAD_REQUEST, "'Content-Length' accepts only one number");
+		return ;
 	}
 	std::stringstream ss(values[0]);
 	if (!std::isdigit(ss.str()[0]))
 	{
-		std::cerr << "error: request : 'Content-Length' should be an unsigned number" << std::endl;
-		exit(EXIT_FAILURE);// TODO: error response
+		errorMsg(BAD_REQUEST, "'Content-Length' should be an unsigned number");
+		return ;
 	}
 	ss >> this->contentLength;
 	if (ss.fail())
 	{
-		std::cerr << "error: request : 'Content-Length' should be an unsigned number" << std::endl;
-		exit(EXIT_FAILURE);	// TODO: error response
+		errorMsg(BAD_REQUEST, "'Content-Length' should be an unsigned number");
+		return ;
 	}
 }
 
-void Request::setContentType(std::vector<std::string> & values) {
+void Request::setContentType(std::vector<std::string> & values)
+{
 	for (std::vector< std::string >::iterator it = values.begin(); it != values.end(); ++it)
 	{
 		this->contentType += *it;
@@ -132,13 +137,14 @@ void Request::setContentType(std::vector<std::string> & values) {
 	}
 }
 
-void Request::setTransferEncoding(std::vector<std::string> & values) {
+void Request::setTransferEncoding(std::vector<std::string> & values)
+{
 	if (values.size() != 1)
 	{
-		std::cerr << "error: request : 'Transfer-Encoding' can have at most 1 value" << std::endl;
-		exit(EXIT_FAILURE);	// TODO: error response
+		errorMsg(BAD_REQUEST, "'Transfer-Encoding' can have at most 1 value");
+		return ;
 	}
-	if (Parser::tolowerstr(values[0]) == "chunked")
+	if (Utils::tolowerstr(values[0]) == "chunked")
 		this->chunked = true;
 	else
 		this->chunked = false;
@@ -155,7 +161,8 @@ std::size_t Request::getContentLength() const { return (this->contentLength); }
 std::string Request::getContentType() const { return (this->contentType); }
 bool Request::getChunked() const { return (this->chunked); }
 
-Request & Request::errorMsg(std::string statusCode, const char * err_msg){
+Request & Request::errorMsg(std::string statusCode, const char * err_msg)
+{
 	this->statusCode = statusCode;
 	std::cerr << "error: request: " << err_msg << std::endl;
 	return (*this);

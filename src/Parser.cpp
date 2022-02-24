@@ -1,5 +1,6 @@
 #include "Parser.hpp"
 #include "Request.hpp"
+#include "Utils.hpp"
 #include "webserv.hpp"
 
 #include <cstdlib>
@@ -10,34 +11,31 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <string> // std::getline() std::append()
 
 namespace Parser
 {
 
-static void openConfigFile(std::string const& path, std::ifstream &readFile) {
-	readFile.open(path.c_str());
-	if (readFile.fail())
-	{
-		std::cerr << "error: cannot open config file '" << path << "'" << std::endl;
-		exit(EXIT_FAILURE); // g_error
-	}
+static void error(std::string const& msg)
+{
+	std::cerr << "error (config file): " << msg << std::endl;
+	exit(EXIT_FAILURE);
 }
 
-//TODO: gestion error exit failure ? 
-static void parseDirectives(std::stringstream & ss, Conf & conf) {
+/* PARSE UN BLOC DE CONFIGURATION DANS UN OBJET CONF */
+static void parseDirectives(std::stringstream & ss, Conf & conf)
+{
 	std::string word;
 	std::map<std::string, void (Conf::*)(std::vector<std::string> const&)> directives;
 
-	directives["listen"] = &Conf::setListen;
-	directives["server_name"] = &Conf::setServerName;
-	directives["autoindex"] = &Conf::setAutoindex;
-	directives["index"] = &Conf::setIndex;
-	directives["root"] = &Conf::setRoot;
-	directives["client_max_body_size"] = &Conf::setClientMaxBodySize;
-	directives["return"] = &Conf::setReturn;
-	directives["error_page"] = &Conf::setErrorPages;
 	directives["allowed_methods"] = &Conf::setAllowedMethods;
+	directives["autoindex"] = &Conf::setAutoindex;
+	directives["client_max_body_size"] = &Conf::setClientMaxBodySize;
+	directives["error_page"] = &Conf::setErrorPages;
+	directives["index"] = &Conf::setIndex;
+	directives["listen"] = &Conf::setListen;
+	directives["return"] = &Conf::setReturn;
+	directives["root"] = &Conf::setRoot;
+	directives["server_name"] = &Conf::setServerName;
 
 	ss >> word;
 	while (!ss.eof())
@@ -47,19 +45,13 @@ static void parseDirectives(std::stringstream & ss, Conf & conf) {
 
 		key = word;
 		if (directives.count(key) <= 0)
-		{
-			std::cerr << "error: unknow config file keyword '" << word  << "'" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+			error(std::string("unknow config file keyword '") + word  + "'");
 
 		ss >> word;
 		while (word != ";")
 		{
 			if (ss.eof())
-			{
-				std::cerr << "error: config file: syntax error missing ';'" << std::endl;
-				exit(EXIT_FAILURE);
-			}
+				error("syntax error missing ';'");
 			vec.push_back(word);
 			ss >> word;
 		}
@@ -68,10 +60,10 @@ static void parseDirectives(std::stringstream & ss, Conf & conf) {
 	}
 }
 
+/* LA LOCATION COPIE LES VARIABLES NON INITIALISEE A PARTIR DE SA CONF PARENTE */
 void completeConfLocation(Conf & conf)
 {
-	//TODO: Rajouter les futures variable parsees
-	/* Initialise les variables de la conf Server{} */
+	//-- Initialise les variables de la conf Server{}
 	if (conf.autoindex == -1)
 		conf.autoindex = 0;
 	if (conf.clientMaxBodySize == -1)
@@ -85,7 +77,7 @@ void completeConfLocation(Conf & conf)
 		conf.allowedMethods.push_back("DELETE");
 	}
 
-	/* Initialise les variables locations vides aux valeurs de la conf Server{} */
+	//-- Initialise les variables locations vides aux valeurs de la conf Server{}
 	for (std::map<std::string, Conf>::iterator it = conf.locations.begin(); it != conf.locations.end(); it++)
 	{
 		if(it->second.autoindex == -1)
@@ -107,13 +99,15 @@ void completeConfLocation(Conf & conf)
 	}
 }
 
-//TODO: gestion erreurs exit failure
+/* PARSE LES CONFS ET LEURS LOCATIONS, RENVOIE UNE MAP CONFSS, CONTENANT UN PORT ET TOUTES SES CONFS CORRESPONDANTES */
 std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path)
 {
 	std::map< uint16_t, std::vector<Conf> > confs;
 	std::ifstream readFile;
 	std::stringstream ss;
-	openConfigFile(path, readFile);
+	readFile.open(path.c_str());
+	if (readFile.fail())
+		error(std::string("cannot open config file '") + path + "'");
 	ss << readFile.rdbuf();
 
 	std::string buf;
@@ -124,33 +118,28 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path)
 		Conf conf;
 		std::stringstream blockServer;
 		//-- Gestion erreur blockServ
-		if (buf != "server") { // maybe keywords before first "server {"
-			std::cerr << "conf file erreur: no 'server' keyword \n";
-			exit(EXIT_FAILURE);
-		}
+		if (buf != "server")
+			error("no 'server' keyword");
 		ss >> buf;
-		if (buf != "{") {
-			std::cerr << "conf file erreur: no '{' after 'server' \n";
-			exit(EXIT_FAILURE);
-		}
-		//-- DECOUPE 1BLOCK-SERV
-		else if (buf == "{") {	// '{'
+		if (buf != "{")
+			error("no '{' after 'server' keyword");
+		//-- DECOUPE 1 BLOCK-SERV
+		else if (buf == "{")
+		{
 			std::string record(buf);
 			ss >> buf;
-			while (!ss.eof() && buf != "}" && buf != "server" && buf != "{") {
-				//-- DECOUPE BLOCK LOCATION
+			while (!ss.eof() && buf != "}" && buf != "server" && buf != "{")
+			{
+				//-- DECOUPE 1 BLOCK LOCATION
 				if(buf == "location" && (record == "}" || record == "{" || record[record.length() - 1] == ';'))
 				{
 					std::stringstream blockLocation;
-					//-- on recup le path de location
+					//-- On recupere le path de location
 					ss >> buf;
-					std::string location_path(buf); 
+					std::string location_path(buf);
 					ss >> buf;
 					if (buf != "{") // tjrs '{' apres locationPath
-					{
-						std::cerr << "conf file erreur: no '{' after 'location' \n";
-						exit(EXIT_FAILURE);
-					}
+						error("no '{' keyword");
 					else if (buf == "{")
 					{
 						ss >> buf;
@@ -164,21 +153,15 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path)
 								blockLocation << buf << " ";
 							ss >> buf;
 						}
-						//-- Decoupe location finie, parse location-conf, ajoute a la map locations presente dans la conf du blocserv
+						//-- Decoupe de location finie, parse location-conf, ajoute a la map locations presente dans la conf du blocserv
 						if (buf == "}")
-						{
 							parseDirectives(blockLocation, conf.locations[location_path]);
-							//conf.locations[location_path].locationPath = location_path;
-						}
-						else {
-							std::cerr << "conf file erreur, location end wihtout '}' \n";
-							exit(EXIT_FAILURE);
-						}
+						else
+							error("location end wihtout '}'");
 					}
 				}
 				//-- Split " " et ";"
 				else if (buf[buf.length() - 1] == ';')
-				//if (buf[buf.length() - 1] == ';')
 					blockServer << buf.substr(0, buf.length() - 1) << " ; ";
 				else
 					blockServer << buf << " ";
@@ -186,33 +169,22 @@ std::map< uint16_t, std::vector<Conf> > parseConf(std::string const& path)
 				ss >> buf;
 			}
 			//-- Decoupe blocserv finie, parse bloc serv et ajoute a la map Confss
-			if (!ss.eof() && buf == "}") {	// '}'
+			if (!ss.eof() && buf == "}")
+			{
 				parseDirectives(blockServer, conf);
 				completeConfLocation(conf);
-			//	std::cerr << "Location[\"" << locationPath << "\"] = " << conf.locations[locationPath] << std::endl;
 				// avant de push_back, completer conf.locations
 				confs[conf.listen].push_back(conf);
 			}
-			else {
-				std::cerr << "conf file erreur, end wihtout '}' \n";
-				exit(EXIT_FAILURE); 
-			}
+			else
+				error("end wihtout '}'");
 		}
 		ss >> buf;
 	}
 	return (confs);
 }
 
-std::string tolowerstr(std::string & str)
-{
-	std::string ans;
-	for (size_t i = 0; i < str.length(); i++){
-		ans.append(1, tolower(str[i]));
-	}
-	return ans;
-}
-
-//TODO: parse plusieurs line
+/* PARSE LE HEADER DE LA REQUETE DANS UN OBJET REQUEST */
 static Request & parseFields(std::stringstream & header_buf, Request & request)
 {
 	std::string word;
@@ -220,119 +192,65 @@ static Request & parseFields(std::stringstream & header_buf, Request & request)
 	std::string key;
 	std::map<std::string, void (Request::*)(std::vector<std::string> &)> fields;
 
-	//std::cout << "param parseFileds: |" << header_buf.str() << "|" << std::endl;
 	fields["host"] = &Request::setHost;
 	fields["content-length"] = &Request::setContentLength;
 	fields["content-type"] = &Request::setContentType;
 	fields["transfer-encoding"] = &Request::setTransferEncoding;
-	fields["user-agent"] = NULL;
-
-	fields["origin"] = NULL;
-
-	fields["connection"] = NULL;
-	fields["pragma"] = NULL;
-	fields["if-modified-since"] = NULL;
-	fields["cache-control"] = NULL;
 
 	fields["accept"] = NULL;
-	fields["accept-language"] = NULL;
 	fields["accept-encoding"] = NULL;
-
-	fields["upgrade-insecure-requests"] = NULL;
-
+	fields["accept-language"] = NULL;
+	fields["cache-control"] = NULL;
+	fields["connection"] = NULL;
+	fields["if-modified-since"] = NULL;
+	fields["origin"] = NULL;
+	fields["postman-token"] = NULL;
+	fields["pragma"] = NULL;
+	fields["referer"] = NULL;
 	fields["sec-fetch-dest"] = NULL;
 	fields["sec-fetch-mode"] = NULL;
 	fields["sec-fetch-site"] = NULL;
 	fields["sec-fetch-user"] = NULL;
-	fields["postman-token"] = NULL;
+	fields["upgrade-insecure-requests"] = NULL;
+	fields["user-agent"] = NULL;
 
-	fields["referer"] = NULL;
-
-	std::getline(header_buf, line);//pour clear la "premiere ligne"
-	while (std::getline(header_buf, line) && line != "\r")//tant que pas fin header_buff
+	std::getline(header_buf, line);	//pour clear la "premiere ligne"
+	while (std::getline(header_buf, line) && line != "\r")
 	{
 		std::vector<std::string> values;
-		//std::cout << "line = " << (int)line[0] << std::endl;
-		if(line.find(":") == std::string::npos)// si un : else erreur
+		if(line.find(":") == std::string::npos)
 			return (request.errorMsg(BAD_REQUEST, "syntax error ':' not found"));
-		std::stringstream ss;
-		ss << line;
-		ss >> key; // on met le premier mot dans key
-		key = tolowerstr(key);//insensible a la casse
-		if (key[key.length() - 1] != ':') // key doit toujours se terminer par ':'
+		std::stringstream ss(line);
+		ss >> key;
+		key = Utils::tolowerstr(key);
+		if (key[key.length() - 1] != ':')
 			return request.errorMsg(BAD_REQUEST, "syntax error key must be followed by ':'");
 		key = key.substr(0, key.length() - 1);
-		if (fields.count(key) <= 0)//si la clef nextiste pas dans map
+		if (fields.count(key) <= 0)
 			return (request.errorMsg(BAD_REQUEST, std::string("unknow keyword '" + key + "'").c_str()));
-		while(!ss.eof() && ss >> word)// tant que pas fin ligne on ajoute les mot dans la vector value
+		while(!ss.eof() && ss >> word)
 			values.push_back(word);
 		if (fields[key])
 			(request.*(fields[key]))(values);
 	}
 	return request;
 }
-			/*
-			//key << word;
-	//		while(word != ":")//tant que != ":" met dans key
-	//		{
-	//			key << word;
-	//		}
-			else
-			{
-				ss >> word; // key [vide]
-				while(!ss.eof())// tant que pas fin ligne on ajoute les mot dans la vector value
-				{
-					values.push_back(word);
-					ss >> word;	
-				}
-				while(getline(header_buf, line))
-				{
-					if(line.find(":") != std::string::npos)
-						break;
-					if(line[0] != '\t' && line[0] != ' ')
-					{
-						std::cerr << "Bad request : multiple lines must begin with tabulation or space" << std::endl;
-						exit(EXIT_FAILURE);//TODO GESTION ERREUR REQUEST STATUS
-					}
-					ss << line;
-					ss >> word;
-					while(!ss.eof())// tant que pas fin ligne on ajoute les mot dans la vector value
-					{
-						values.push_back(word);
-						ss >> word;	
-					}				
-				}
-			}
-			(request.*(fields[key.str()]))(values);
-			std::cout << "request = |" << request << "|" << std::endl;	// debug curr request
-		}
-		else//la premiere ligne contient pas :
-		{
-			std::cerr << "Bad request : syntax in header request : usage [key] : [value] or [key] : [value1] [value2] [...] \n [value3]" << std::endl;
-			exit(EXIT_FAILURE);//TODO GESTION ERREUR REQUEST STATUS
-		}
-	}
-	return (request);
-}
-*/
 
 Request & parseRequest(Request & request)
 {
 	std::stringstream ss(request.headerBuf);
 	std::string buf;
 
-	//std::cout << "param parseRequest: |" << ss.str() << "|" << std::endl;
 	ss >> buf;
 	if (buf != "POST" && buf != "GET" && buf != "DELETE")
 		return (request.errorMsg(BAD_REQUEST, std::string("unknow method '" + buf + "'").c_str()));
 	request.setMethod(buf);
 	ss >> buf;
-	// path: file to add with root => [root]/[index]
 	if (buf[0] != '/') // path must start with /
 		return (request.errorMsg(BAD_REQUEST, "path must start with '/'"));
 	request.setPath(buf);
 	ss >> buf;
-	if (buf != "HTTP/1.1") // protocol version
+	if (buf != "HTTP/1.1")
 		return (request.errorMsg(BAD_REQUEST, "protocol version not supported, only HTTP/1.1 works"));
 	request.setProtocolVersion(buf);
 	return parseFields(ss, request); // ss curseur sur la 2 eme ligne

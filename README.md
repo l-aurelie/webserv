@@ -25,7 +25,6 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] repondre aux messages des clients
 	- [x] utiliser les fichiers de conf
 	- [x] parse content-length
-	- [ ] revoir la maniere dont le client se deconnecte (deconnexion entre 2 requetes a partir du navigateur)
 	- [ ] deconnecter le client si read/recv return 0 OR -1
 - [ ] Parsing des fichiers de conf
 	- [x] Prendre chemin en argument
@@ -42,14 +41,12 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] possiblity de changer les pages d'error
 	- [x] autoindex on/off
 	- [x] allowed_method
-	- [ ] Gerer clientbodysize taille (m, g, k)
 	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
 	- [ ] Setup the server_names or not.
 - [ ] parsing des requetes clients
 	- [x] analyse messages requetes
 	- [x] create d'objet Request
 	- [x] tronquer le body a max_client_body_size
-	- [ ] gerer les header field-values multiligne
 - [ ] creation des reponses du serveur
 	- [x] header
 	- [x] body => aller chercher le fichier correspondant
@@ -66,7 +63,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 		- [x] handle content-length
 		- [ ] upload.php script
 	- [x] download fichier
-- [ ] CGI
+- [x] CGI
 	- [x] C'est quoi ?
 	- [x] Faire requete GET dans le terminal
 	- [X] Faire requete POST dans le terminal
@@ -78,18 +75,16 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 		- [x] GET body
 		- [x] GET Header
 	- [x] gestion d'erreur dans launchCGI
-	- [ ] unchunck request
-- [ ] clean
-	- [ ] deplacer dans utils
-	- [ ] decouper les fonctions
-- [ ] proteger les fichiers elementaires
-
-## Fix
-
-- [ ] Notre server execute la requete des la premiere ligne envoyee a nc
-- [ ] impossible de supprimer un dossier
-- [ ] 409 Conflict when rm a folder that contains a file without perms
-- [ ] how to test DELETE on browser ?
+	- [x] unchunck request
+- [x] clean
+	- [x] deplacer dans utils
+	- [x] decouper les fonctions
+- [x] proteger les fichiers elementaires
+- [ ] default site to demonstrate
+- [ ] default conf to demonstrate
+- [x] Error messages
+- [ ] add const and references
+- [ ] Leaks
 
 ## Doc
 
@@ -104,48 +99,3 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 [https://www.ibm.com/docs/ko/netcoolomnibus/8.1?topic=scripts-environment-variables-in-cgi-script](https://www.ibm.com/docs/ko/netcoolomnibus/8.1?topic=scripts-environment-variables-in-cgi-script)
 [http://www.cgi101.com/book/ch3/text.html](http://www.cgi101.com/book/ch3/text.html)
 https://fr.wikipedia.org/wiki/Variables_d%27environnement_CGI
-
-## Subject
-
-- [ ] Web server
-	- [x] Listen for client
-	- [x] Listen for clients
-	- [x] Non blocking
-	- [x] Use poll or equivalent to control IO between client and server
-	- [x] Use only 1 poll or equivalent
-	- [x] Request must never hang forever
-	- [ ] Default error pages
-	- [ ] Serve fully static website
-	- [ ] Let client upload files
-	- [ ] Accurate response status [doc](https://developer.mozilla.org/fr/docs/Web/HTTP/Status)
-	- [ ] Method GET
-	- [ ] Method POST
-	- [ ] Method DELETE
-	- [ ] Ability to listen on multiple ports
-	- [ ] Take config file as arg
-	- [ ] Set default path for config file
-- [ ] Config file
-	- [ ] provide file to demonstrate every feature
-	- [ ] choose port and host for each "server"
-	- [ ] ability to setup server_name or not
-	- [ ] The first server for a host:port will be the default for this host:port (meaning it will answer to all request that doesn’t belong to an other server)
-	- [ ] Default error pages
-	- [ ] limit client body size
-	- [ ] accept uploaded files
-	- [ ] configure where uploaded files should be saved
-	- [ ] Setup routes one or multiple config
-		- [ ] list of accepted HTTP methods
-		- [ ] HTTP redirection
-		- [ ] 'root' like in nginx conf
-		- [ ] directory listing ('autoindex' in nginx conf)
-		- [ ] 'index' like in nginx conf
-		- [ ] Execute CGI
-			- [ ] use full path as PATH_INFO
-			- [ ] unchunk request
-			- [ ] expect EOF as end of body
-			- [ ] call the cgi with the file requested as first arg
-			- [ ] run in correct directory for relative path
-
-- [ ] Error messages
-- [ ] add const and references
-- [ ] Leaks

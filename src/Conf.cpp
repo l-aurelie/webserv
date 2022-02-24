@@ -1,4 +1,5 @@
 #include "Conf.hpp"
+
 #include <cstdlib>
 #include <iostream>
 #include <ostream>
@@ -7,12 +8,11 @@
 #include <vector>
 
 Conf::Conf(void) : listen(80), autoindex(-1), clientMaxBodySize(-1), redirectCode(-1) {}
-
 Conf::Conf(Conf const& rhs) { *this = rhs; }
+Conf::~Conf(void) {}
 
-Conf::~Conf(void) { }
-
-Conf& Conf::operator=(Conf const& rhs) {
+Conf& Conf::operator=(Conf const& rhs)
+{
 	if (this == &rhs)
 		return (*this);
 	this->listen = rhs.listen;
@@ -22,7 +22,6 @@ Conf& Conf::operator=(Conf const& rhs) {
 	this->root = rhs.root;
 	this->clientMaxBodySize = rhs.clientMaxBodySize;
 	this->locations = rhs.locations;
-	//this->locationPath = rhs.locationPath;
 	this->redirectCode = rhs.redirectCode;
 	this->redirectURL = rhs.redirectURL;
 	this->errorPages = rhs.errorPages;
@@ -30,7 +29,8 @@ Conf& Conf::operator=(Conf const& rhs) {
 	return (*this);
 }
 
-std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
+std::ostream & operator<<(std::ostream & os, Conf const& rhs)
+{
 	os << "Server {" << std::endl;
 
 	if (rhs.listen)
@@ -59,7 +59,8 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 		std::cout << "location " << it->first << " " << it->second;
 	for (std::map< int, std::string >::const_iterator it = rhs.errorPages.begin(); it != rhs.errorPages.end(); it++)
 		std::cout << "error_page " << it->first << " " << it->second;
-	if (!rhs.allowedMethods.empty()) {
+	if (!rhs.allowedMethods.empty())
+	{
 		os << "\tallowedMethods:";
 		for (std::vector<std::string>::const_iterator it = rhs.allowedMethods.begin(); it != rhs.allowedMethods.end(); ++it)
 			os << " " << *it;
@@ -69,9 +70,13 @@ std::ostream & operator<<(std::ostream & os, Conf const& rhs) {
 	return (os);
 }
 
-//======================================================================//
+//================================================================//
 
-void Conf::setListen(std::vector<std::string> const& values) {
+void Conf::setServerName(std::vector<std::string> const& values) { this->serverName = values; }
+void Conf::setIndex(std::vector<std::string> const& values) { this->index = values; }
+
+void Conf::setListen(std::vector<std::string> const& values)
+{
 	if (values.size() != 1)
 	{
 		std::cerr << "error: config file : 'listen' accepts only one port" << std::endl;
@@ -92,10 +97,8 @@ void Conf::setListen(std::vector<std::string> const& values) {
 	}
 }
 
-void Conf::setServerName(std::vector<std::string> const& values) { this->serverName = values; }
-void Conf::setIndex(std::vector<std::string> const& values) { this->index = values; }
-
-void Conf::setAutoindex(std::vector<std::string> const& values) {
+void Conf::setAutoindex(std::vector<std::string> const& values)
+{
 	if (values.size() != 1)
 	{
 		std::cerr << "error: config file : 'autoindex' accepts only one value" << std::endl;
@@ -112,7 +115,8 @@ void Conf::setAutoindex(std::vector<std::string> const& values) {
 	}
 }
 
-void Conf::setRoot(std::vector<std::string> const& values) {
+void Conf::setRoot(std::vector<std::string> const& values)
+{
 	if (values.size() != 1)
 	{
 		std::cerr << "error: config file : 'root' accepts only one path" << std::endl;
@@ -121,7 +125,8 @@ void Conf::setRoot(std::vector<std::string> const& values) {
 	this->root = values[0];
 }
 
-void Conf::setClientMaxBodySize(std::vector<std::string> const& values) {	// TODO: gerer les unites
+void Conf::setClientMaxBodySize(std::vector<std::string> const& values)
+{
 	if (values.size() != 1)
 	{
 		std::cerr << "error: config file : 'max_client_body_size' accepts only one value" << std::endl;
@@ -143,7 +148,8 @@ void Conf::setClientMaxBodySize(std::vector<std::string> const& values) {	// TOD
 	}
 }
 
-void Conf::setReturn(std::vector<std::string> const& values) {
+void Conf::setReturn(std::vector<std::string> const& values)
+{
 	if (values.size() != 2)
 	{
 		std::cerr << "error: config file : 'return' need code and URL" << std::endl;
@@ -163,9 +169,9 @@ void Conf::setReturn(std::vector<std::string> const& values) {
 		std::cerr << "error: config file : 'return' unsigned numeric code required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	if (this->redirectCode != 301 && this->redirectCode != 307)// TODO: other codes
+	if (this->redirectCode < 300 || this->redirectCode > 307 || this->redirectCode == 306)
 	{
-		std::cerr << "error: config file : 'return' only 301 and 307 code are implemented" << std::endl;	// TODO: implement other codes
+		std::cerr << "error: config file : 'return' only 300 to 307 (306 excluded) code are implemented" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	this->redirectURL = values[1];
@@ -196,7 +202,8 @@ void Conf::setErrorPages(std::vector<std::string> const& values)
 	this->errorPages[code] = values[1];
 }
 
-void Conf::setAllowedMethods(std::vector<std::string> const& values) {
+void Conf::setAllowedMethods(std::vector<std::string> const& values)
+{
 	this->allowedMethods.clear();
 	for (std::vector<std::string>::const_iterator it = values.begin(); it != values.end(); ++it)
 	{
@@ -208,10 +215,3 @@ void Conf::setAllowedMethods(std::vector<std::string> const& values) {
 	}
 	this->allowedMethods = values;
 }
-
-//uint16_t Conf::getListen() const { return (this->listen); }
-//std::vector<std::string> Conf::getServerName() const { return (this->serverName); }
-//bool Conf::getAutoindex() const { return (this->autoindex); }
-//std::vector<std::string> Conf::getIndex() const {return (this->index); }
-//std::string Conf::getRoot() const { return (this->root); }
-//std::size_t Conf::getClientMaxBodySize() const { return (this->clientMaxBodySize); }

@@ -10,7 +10,6 @@
 class Response {
 	public:
 		Response();
-		//Response(Request &request);
 		Response(Response const& rhs);
 		~Response();
 
@@ -19,19 +18,15 @@ class Response {
 		std::string prepareResponse(Request & request, std::vector<Conf> &confs);
 
 	private:
-		// Header
 		std::string path;
 		std::string queryString;
 		std::string protocolVersion;
 		std::string statusCode;
 		std::size_t contentLength;
-		std::string contentType;
 		std::string server;
 		std::string location;
 		std::string date;
 		std::string lastModified;
-
-		std::string body;
 
 		void constructPath(Request &request, Conf const& conf);
 		void fillHeader();
@@ -43,8 +38,16 @@ class Response {
 		std::string errorFillResponse(std::string code, Conf & conf);
 		
 		void autoIndex(std::string const& path, std::string const& root);
-		void deleteFile(Request &request, Conf const &conf);
-		void getFile(Request & request, Conf const& conf);
-		void launchCGI(Request &request);
+		void methodDelete(Request &request, Conf const &conf);
+		void methodGet(Request & request, Conf const& conf);
+
+
+	public:
+		std::string body;
+		std::string contentType;
+
+		std::string const& getPath() const;
+		std::string const& getQueryString() const;
+
 		void error(std::string const & status_code, std::string const & error);
 };

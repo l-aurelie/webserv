@@ -25,13 +25,6 @@ class Conf
 		void setErrorPages(std::vector<std::string> const& values);
 		void setAllowedMethods(std::vector<std::string> const& values);
 
-	//	uint16_t getListen() const;
-	//	std::vector<std::string> getServerName() const;
-	//	bool getAutoindex() const;
-	//	std::vector<std::string> getIndex() const;
-	//	std::string getRoot() const;
-	//	std::size_t getClientMaxBodySize() const;
-
 		uint16_t listen;
 		std::vector<std::string> serverName;
 		int autoindex;
@@ -39,12 +32,10 @@ class Conf
 		std::vector<std::string> allowedMethods;
 		std::string root;
 		int clientMaxBodySize;
-		std::map< std::string, Conf > locations;	//TODO: Private ?
-		//std::string locationPath;//TODO: inutile pour le moment 
+		std::map< std::string, Conf > locations;
 		std::string redirectURL;
 		int redirectCode;
 		std::map<int, std::string> errorPages;
-	private:
 };
 
 std::ostream & operator<<(std::ostream & os, Conf const& rhs);
