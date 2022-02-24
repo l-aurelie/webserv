@@ -71,7 +71,6 @@ std::ostream & operator<<(std::ostream & os, Request const& rhs)
 }
 
 //================================================================//
-/* Setter */
 
 void Request::setMethod(std::string method) { this->method = method; }
 void Request::setPath(std::string path) { this->path = path; }
@@ -149,8 +148,6 @@ void Request::setTransferEncoding(std::vector<std::string> & values)
 	else
 		this->chunked = false;
 }
-
-/* Getter */
 
 std::string Request::getMethod() const { return (this->method); }
 std::string Request::getPath() const { return (this->path); }

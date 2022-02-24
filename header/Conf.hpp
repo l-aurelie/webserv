@@ -24,6 +24,8 @@ class Conf
 		void setReturn(std::vector<std::string> const& values);
 		void setErrorPages(std::vector<std::string> const& values);
 		void setAllowedMethods(std::vector<std::string> const& values);
+		void setUploadDir(std::vector<std::string> const& values);
+		void setCGI(std::vector<std::string> const& values);
 
 		uint16_t listen;
 		std::vector<std::string> serverName;
@@ -36,6 +38,8 @@ class Conf
 		std::string redirectURL;
 		int redirectCode;
 		std::map<int, std::string> errorPages;
+		std::string uploadDir;
+		std::map<std::string, std::string> cgi;
 };
 
 std::ostream & operator<<(std::ostream & os, Conf const& rhs);

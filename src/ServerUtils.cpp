@@ -9,6 +9,7 @@
 
 namespace ServerUtils {
 
+/* AJOUTE LE BUFFER AU TMPFILE BODY POUR LES REQUETES NON CHUNKED */
 static void writeBodyInTMPFile(Request & req, char *buf, int read)
 {
 	if (req.countClientMaxBodySize > 0 && read > req.countClientMaxBodySize && req.countClientMaxBodySize <= req.countContentLength)//depasse le client_max_body_size
@@ -31,6 +32,7 @@ static void writeBodyInTMPFile(Request & req, char *buf, int read)
 	}
 }
 
+/* POUR LES REQUETES CHUNKED: UNCHUNK ET AJOUTE LE BUFFER AU TMPFILE BODY */
 static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & req)
 {
 	while (pos != static_cast<std::size_t>(read))	// tant que pas fin du buf
@@ -100,6 +102,7 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 	}
 }
 
+/* REMPLI LE HEADER ET LE BODY DE L'OBJET REQUEST, PREND EN COMPTE MAXBODYSIZE ET CONTENTLENGTH */
 void parseRecv(int bytes_read, char * buf, Request & req, std::vector< Conf > & confs) 
 {
 	//-- Cherche la fin du header

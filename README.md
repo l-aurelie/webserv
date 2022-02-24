@@ -82,9 +82,14 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 - [x] proteger les fichiers elementaires
 - [ ] default site to demonstrate
 - [ ] default conf to demonstrate
+- [x] Une requête à votre serveur ne devrait jamais se bloquer indéfiniment.
+- [x] Exécuter CGI en fonction de certaines extensions de fichier (par exemple .php).
+- [x] Rendre la route capable d’accepter les fichiers téléchargés et configurer où cela doit être enregistré.
 - [x] Error messages
-- [ ] add const and references
-- [ ] Leaks
+- [x] add const and references
+- [x] assignation operators
+- [x] Leaks
+- [ ] error when reloading page after uploaded file
 
 ## Doc
 

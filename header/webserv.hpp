@@ -1,9 +1,7 @@
 #ifndef WEBSERV_HPP
 #define WEBSERV_HPP
 
-//-- Precisez le path de votre binaire cgi
-#define PHP_CGI_PATH "/Users/antoine/Documents/GitHub/webserv/cgi/php-cgi"
-#define PY_CGI_PATH "/Users/antoine/Documents/GitHub/webserv/cgi/python-cgi"
+#define UPLOAD_DIR "/Users/antoine/Documents/GitHub/webserv/upload/"
 
 #define BUF_SIZE 4096
 

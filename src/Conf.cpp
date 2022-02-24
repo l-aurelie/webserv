@@ -26,6 +26,8 @@ Conf& Conf::operator=(Conf const& rhs)
 	this->redirectURL = rhs.redirectURL;
 	this->errorPages = rhs.errorPages;
 	this->allowedMethods = rhs.allowedMethods;
+	this->uploadDir = rhs.uploadDir;
+	this->cgi = rhs.cgi;
 	return (*this);
 }
 
@@ -214,4 +216,29 @@ void Conf::setAllowedMethods(std::vector<std::string> const& values)
 		}
 	}
 	this->allowedMethods = values;
+}
+
+void Conf::setUploadDir(std::vector<std::string> const& values)
+{
+	if (values.size() != 1)
+	{
+		std::cerr << "error: config file : 'upload_dir' accepts only one path" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	this->uploadDir = values[0];
+}
+
+void Conf::setCGI(std::vector<std::string> const& values)
+{
+	if (values.size() != 2)
+	{
+		std::cerr << "error: config file : 'cgi' must have one extension and one path" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (values[0][0] != '.')
+	{
+		std::cerr << "error: config file : 'cgi' extension must start with a '.'" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	this->cgi[values[0]] = values[1];
 }

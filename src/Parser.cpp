@@ -36,6 +36,8 @@ static void parseDirectives(std::stringstream & ss, Conf & conf)
 	directives["return"] = &Conf::setReturn;
 	directives["root"] = &Conf::setRoot;
 	directives["server_name"] = &Conf::setServerName;
+	directives["upload_dir"] = &Conf::setUploadDir;
+	directives["cgi"] = &Conf::setCGI;
 
 	ss >> word;
 	while (!ss.eof())
@@ -219,7 +221,7 @@ static Request & parseFields(std::stringstream & header_buf, Request & request)
 	{
 		std::vector<std::string> values;
 		if(line.find(":") == std::string::npos)
-			return (request.errorMsg(BAD_REQUEST, "syntax error ':' not found"));
+			return (request.errorMsg(BAD_REQUEST, (std::string("syntax error ':' not found in line '") + line + "'").c_str()));//TODO:
 		std::stringstream ss(line);
 		ss >> key;
 		key = Utils::tolowerstr(key);

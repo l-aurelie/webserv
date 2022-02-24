@@ -1,3 +1,4 @@
+#include "Conf.hpp"
 #include "CGI.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
@@ -7,6 +8,9 @@
 #include <fstream>
 #include <sstream>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <iostream>
 
 CGI::CGI()
 {
@@ -25,6 +29,7 @@ CGI &CGI::operator=(CGI const &rhs)
 	this->queryString = rhs.queryString;
 	this->contentLength = rhs.contentLength;
 	this->contentType = rhs.contentType;
+	this->uploadDir = rhs.uploadDir;
 
 	this->fds_out[0] = rhs.fds_out[0];
 	this->fds_out[1] = rhs.fds_out[1];
@@ -35,28 +40,42 @@ CGI &CGI::operator=(CGI const &rhs)
 
 //================================================================//
 
-void CGI::initCGIArgs(std::string const& path)
+void CGI::initCGIArgs(Response & response, Conf & conf)
 {
-	if (path.rfind(".") != std::string::npos && path.substr(path.rfind(".")) == ".php")
-		args.push_back(PHP_CGI_PATH);
-	else if (path.rfind(".") != std::string::npos && path.substr(path.rfind(".")) == ".py")
-		args.push_back(PY_CGI_PATH);
-	args.push_back(path.c_str());
+	std::string const& path = response.getPath();
+	args.push_back(conf.cgi[path.substr(path.rfind("."))].c_str());
+	/* Verifie que la path du cgi est correct */
+	struct stat infos;
+	if (stat(conf.cgi[path.substr(path.rfind("."))].c_str(), &infos) == -1)
+	{
+		args = std::vector< const char *>();
+		return (response.error(INTERNAL, "cgi bin not found"));
+	}
+	if (!(infos.st_mode & S_IXUSR))
+	{
+		args = std::vector< const char *>();
+		return (response.error(INTERNAL, "cannot execute cgi bin"));
+	}
+	args.push_back(response.getPath().c_str());
 	args.push_back(NULL);
 }
 
 /* INITIALISE LES ARGUMENTS ET L'ENVIRONNEMENT DU CGI */
-void CGI::initCGIEnv(Request const& request, Response & response)
+void CGI::initCGIEnv(Request const& request, Response & response, Conf const& conf)
 {
 	scriptFilename = std::string("SCRIPT_FILENAME=") + response.getPath();
 	requestMethod = std::string("REQUEST_METHOD=") + request.getMethod();
 	queryString = std::string("QUERY_STRING=") + response.getQueryString();
+	uploadDir = std::string("UPLOAD_DIR=") + UPLOAD_DIR;
 
 	env.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env.push_back("REDIRECT_STATUS=200");
 	env.push_back(scriptFilename.c_str());
 	env.push_back(requestMethod.c_str());
 	env.push_back(queryString.c_str());
+	if (!conf.uploadDir.empty())
+		uploadDir = std::string("UPLOAD_DIR=") + conf.uploadDir;
+	env.push_back(uploadDir.c_str());
 	if (request.getMethod() == "POST")
 	{
 		std::stringstream ss;
@@ -92,12 +111,14 @@ void CGI::execCGI(Request &request, Response &response)
 		return (response.error(INTERNAL, "execve syscall failed"));
 }
 
-void CGI::launchCGI(Request & request, Response &response)
+void CGI::launchCGI(Request & request, Response &response, Conf & conf)
 {
 	if (pipe(fds_out) == -1) // OUVERTURE PIPE_OUT ====
 		return (response.error(INTERNAL, "pipe syscall failed"));
-	initCGIArgs(response.getPath());
-	initCGIEnv(request, response);
+	initCGIArgs(response, conf);
+	if (args.empty())
+		return ;
+	initCGIEnv(request, response, conf);
 	if (env.empty())
 		return ;
 	//-- EXEC PHP-CGI : fork, redirige stdout pour recuperer la reponse cgi, execve cgi 

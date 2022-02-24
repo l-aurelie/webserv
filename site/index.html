@@ -11,19 +11,17 @@
 		<input type="text" name="text" />
 		<button type="submit" name="send" value="send">SEND GET</button>
 	</form>
-	<form action="phpinfo.php" method="POST" enctype="multipart/form-data">
-		<input type="hidden" name="MAX_FILE_SIZE" value="2500000" title="Permitted bytes per file." />
-		<input type="text" name="text" />
-		Send this file: <input name="userfile" type="file" />
-		<button type="submit" name="send" value="send">CHRONOPOST</button>
-	</form>
 	<form action="phpinfo.php" method="POST">
 		<input type="text" name="text" />
 		<button type="submit" name="send" value="send">POST</button>
 	</form>
+	<form action="upload.php" method="POST" enctype="multipart/form-data">
+		<input type="text" name="text" />
+		Send this file: <input name="userfile" type="file" />
+		<button type="submit" name="send" value="send">CHRONOPOST</button>
+	</form>
 	<div>
-		<!-- <img src="/img.jpeg" alt="image" id="pouassont"/> -->
-		<button id="coucou">COUCOU</button>
+		<img src="/img.jpeg" alt="image" id="pouassont"/>
 	</div>
 	<script src="main.js"></script>
 </body>

@@ -15,7 +15,7 @@ class CGI
 		~CGI();
 		CGI & operator=(CGI const& rhs);
 
-		void launchCGI(Request & request, Response & response);
+		void launchCGI(Request & request, Response & response, Conf & conf);
 	
 	private:
 		std::string scriptFilename;
@@ -23,12 +23,13 @@ class CGI
 		std::string queryString;
 		std::string contentLength;
 		std::string contentType;
+		std::string uploadDir;
 
 		int fds_out[2];
 		std::vector<const char *> args;
 		std::vector<const char *> env;
 
-		void initCGIArgs(std::string const& path);
-		void initCGIEnv(Request const& request, Response & response);
+		void initCGIArgs(Response & response, Conf & conf);
+		void initCGIEnv(Request const& request, Response & response, Conf const& conf);
 		void execCGI(Request & request, Response & response);
 };

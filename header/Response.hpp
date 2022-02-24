@@ -31,7 +31,7 @@ class Response {
 		void constructPath(Request &request, Conf const& conf);
 		void fillHeader();
 		void redirected(int code, std::string const& url);
-		void fillBody(Request & request, Conf const& conf);
+		void fillBody(Request & request, Conf & conf);
 		std::string format() const;
 		void setContentType();
 		std::string matchingExtensionType(const std::string &extension);
@@ -39,7 +39,7 @@ class Response {
 		
 		void autoIndex(std::string const& path, std::string const& root);
 		void methodDelete(Request &request, Conf const &conf);
-		void methodGet(Request & request, Conf const& conf);
+		void methodGet(Request & request, Conf & conf);
 
 
 	public:

@@ -275,7 +275,7 @@ void Response::methodDelete(Request &request, Conf const &conf)
 }
 
 /* REMPLI LE BODY SELON LA METHODE GET */
-void Response::methodGet(Request &request, Conf const &conf)
+void Response::methodGet(Request &request, Conf &conf)
 {
 	//-- Recupere le path
 	constructPath(request, conf);
@@ -283,10 +283,10 @@ void Response::methodGet(Request &request, Conf const &conf)
 		return;
 
 	//-- Le fichier demande est un CGI
-	if (path.rfind(".") != std::string::npos && (path.substr(path.rfind(".")) == ".php" || path.substr(path.rfind(".")) == ".py"))
+	if (path.rfind(".") != std::string::npos && conf.cgi.count(path.substr(path.rfind("."))) > 0)
 	{
 		CGI cgi;
-		cgi.launchCGI(request, *this);
+		cgi.launchCGI(request, *this, conf);
 	}
 	//-- Le fichier n'est pas un CGI
 	else
@@ -300,7 +300,7 @@ void Response::methodGet(Request &request, Conf const &conf)
 }
 
 /* REMPLI L'ATTRIBUT BODY EN FONCTION DU PATH DEMANDE ET DE LA METHODE DEMANDEE */
-void Response::fillBody(Request &request, Conf const &conf)
+void Response::fillBody(Request &request, Conf & conf)
 {
 	statusCode = "200 OK";
 	if (request.getMethod() == "GET")
@@ -315,7 +315,7 @@ void Response::fillBody(Request &request, Conf const &conf)
 	{
 		constructPath(request, conf);
 		CGI cgi;
-		cgi.launchCGI(request, *this);
+		cgi.launchCGI(request, *this, conf);
 	}
 }
 
