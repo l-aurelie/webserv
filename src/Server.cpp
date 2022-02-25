@@ -161,6 +161,8 @@ void Server::launch(void)
 		}
 		for (std::vector<struct pollfd>::iterator it = fds.begin() + 1; it != fds.end(); it++)
 		{
+	//		if (buf contient un truc)
+		//		ecrit dans fichier
 			//-- un client nous envoie un message
 			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
 				listenRequest(it);

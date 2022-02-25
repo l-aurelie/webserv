@@ -204,6 +204,7 @@ static Request & parseFields(std::stringstream & header_buf, Request & request)
 	fields["accept-language"] = NULL;
 	fields["cache-control"] = NULL;
 	fields["connection"] = NULL;
+	fields["expect"] = NULL;
 	fields["if-modified-since"] = NULL;
 	fields["origin"] = NULL;
 	fields["postman-token"] = NULL;

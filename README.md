@@ -89,7 +89,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 - [x] add const and references
 - [x] assignation operators
 - [x] Leaks
-- [ ] error when reloading page after uploaded file
+- [x] error when reloading page after uploaded file
 
 ## Doc
 
