@@ -93,8 +93,9 @@ void Server::acceptClient(void)
 		std::cerr << "accept syscall failed\n";
 		return ;
 	}
-	//pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
-	pfd.events = POLLIN | POLLOUT | POLLERR;
+	msg_from_client[pfd.fd].createTMPFile();
+	pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
+	//pfd.events = POLLIN | POLLOUT | POLLERR;
 	fds.push_back(pfd);
 }
 
@@ -103,10 +104,9 @@ void Server::acceptClient(void)
 void Server::listenRequest(std::vector<struct pollfd>::iterator it)
 {
 	int client_id = it->fd;
-	Request & req = msg_from_client[client_id];//define pour simplifier
-	if (req.tmpFile.fail())
+	if (msg_from_client[client_id].tmpFile.fail())
 	{
-		std::cerr << "failed to open tmpfile" << std::endl;
+		std::cerr << "failed to open tmpfile '" << msg_from_client[client_id].tmpFilename << "'" << std::endl;
 		endConnection(it);
 		return ;
 	}
@@ -121,7 +121,7 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator it)
 	}
 	buf[bytes_read] = '\0';
 	//-- Rempli header et body de l'objet request
-	ServerUtils::parseRecv(bytes_read, buf, req, this->confs);
+	ServerUtils::parseRecv(bytes_read, buf, msg_from_client[client_id], this->confs);
 }
 
 /* ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse :
@@ -143,6 +143,7 @@ void Server::endConnection(std::vector<struct pollfd>::iterator it)
 {
 	close(it->fd);
 	msg_to_client.erase(it->fd);
+	remove(msg_from_client[it->fd].tmpFilename.c_str());
 	msg_from_client.erase(it->fd);
 	fds.erase(it);
 }
@@ -171,8 +172,8 @@ void Server::launch(void)
 				break ;
 			}
 			//-- le client se deconnecte
-			else if (it->revents & POLLERR)
-			//else if (it->revents & POLLERR || it->revents & POLLRDHUP) // TODO: do not work on mac
+			//else if (it->revents & POLLERR)
+			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // TODO: do not work on mac
 			{
 				endConnection(it);
 				break ;

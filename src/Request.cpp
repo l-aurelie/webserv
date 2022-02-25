@@ -10,20 +10,9 @@
 #include <sstream>
 #include <unistd.h>
 
-Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), port(80)
-{
-	tmpFilename = "/tmp/webserv_XXXXXX";
-	int fd = mkstemp(&(*tmpFilename.begin()));
-	if (fd != -1)
-		close(fd);
-	this->tmpFile.open(tmpFilename.c_str(), std::fstream::out | std::fstream::in | std::fstream::binary | std::fstream::trunc);
-}
-
+Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), port(80) {}
 Request::Request(Request const& rhs) { *this = rhs; }
-Request::~Request()
-{
-	remove(tmpFilename.c_str());
-}
+Request::~Request() {}
 
 Request& Request::operator=(Request const& rhs)
 {
@@ -71,6 +60,15 @@ std::ostream & operator<<(std::ostream & os, Request const& rhs)
 }
 
 //================================================================//
+
+void Request::createTMPFile()
+{
+	tmpFilename = "/tmp/webserv_XXXXXX";
+	int fd = mkstemp(&(*tmpFilename.begin()));
+	if (fd != -1)
+		close(fd);
+	this->tmpFile.open(tmpFilename.c_str(), std::fstream::out | std::fstream::in | std::fstream::binary | std::fstream::trunc);
+}
 
 void Request::setMethod(std::string method) { this->method = method; }
 void Request::setPath(std::string path) { this->path = path; }

@@ -98,7 +98,7 @@ void CGI::execCGI(Request &request, Response &response)
 	//- + Redirige tmpFile en input pour que POST puisse prendre le body en input
 	int fd_tmp_file = open(request.tmpFilename.c_str(), O_RDONLY);
 	if (dup2(fd_tmp_file, STDIN_FILENO) == -1)
-		return (response.error(INTERNAL, "dup2 syscall failed"));
+		return (response.error(INTERNAL, "dup2 1 syscall failed"));
 	//- Redirige stdout pour recuperer la reponse du cgi
 	if (close(fds_out[0]) == -1)
 		return (response.error(INTERNAL, "close syscall failed"));

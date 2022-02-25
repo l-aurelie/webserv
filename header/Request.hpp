@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,7 @@ class Request
 		std::string getContentType() const;
 		bool getChunked() const;
 
+		void createTMPFile();
 		void setMethod(std::string method);
 		void setPath(std::string path);
 		void setProtocolVersion(std::string protocolVersion);
