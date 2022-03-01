@@ -90,6 +90,11 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 - [x] assignation operators
 - [x] Leaks
 - [x] error when reloading page after uploaded file
+- [x] send buffer
+- [x] change pipe to tmp file
+	- [x] put read/write in poll loop
+	- [x] remove tmpfile
+- [ ] autoindex do not work
 
 ## Doc
 

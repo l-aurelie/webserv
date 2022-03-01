@@ -17,10 +17,10 @@ CGI::CGI()
 	this->fds_out[0] = -1;
 	this->fds_out[1] = -1;
 }
-CGI::CGI(CGI const &rhs) { *this = rhs; }
+CGI::CGI(CGI const& rhs) { *this = rhs; }
 CGI::~CGI() {}
 
-CGI &CGI::operator=(CGI const &rhs)
+CGI &CGI::operator=(CGI const& rhs)
 {
 	if (this == &rhs)
 		return (*this);
@@ -93,16 +93,15 @@ void CGI::initCGIEnv(Request const& request, Response & response, Conf const& co
 	env.push_back(NULL);
 }
 
-void CGI::execCGI(Request &request, Response &response)
+void CGI::execCGI(Request & request, Response & response)
 {
 	//- + Redirige tmpFile en input pour que POST puisse prendre le body en input
-	int fd_tmp_file = open(request.tmpFilename.c_str(), O_RDONLY);
-	if (dup2(fd_tmp_file, STDIN_FILENO) == -1)
+	int fd_tmp_file_in = open(request.tmpFilename.c_str(), O_RDONLY);
+	if (dup2(fd_tmp_file_in, STDIN_FILENO) == -1)
 		return (response.error(INTERNAL, "dup2 1 syscall failed"));
 	//- Redirige stdout pour recuperer la reponse du cgi
-	if (close(fds_out[0]) == -1)
-		return (response.error(INTERNAL, "close syscall failed"));
-	if (dup2(fds_out[1], STDOUT_FILENO) == -1)
+	int fd_tmp_file_out = open(response.tmpFilename.c_str(), O_WRONLY);
+	if (dup2(fd_tmp_file_out, STDOUT_FILENO) == -1)
 		return (response.error(INTERNAL, "dup2 syscall failed"));
 	//- Se place dans le bon directory et exec php cgi
 	if (chdir(response.getPath().substr(0, response.getPath().rfind("/") - 1).c_str()) == -1)
@@ -111,10 +110,8 @@ void CGI::execCGI(Request &request, Response &response)
 		return (response.error(INTERNAL, "execve syscall failed"));
 }
 
-void CGI::launchCGI(Request & request, Response &response, Conf & conf)
+void CGI::launchCGI(Request & request, Response & response, Conf & conf)
 {
-	if (pipe(fds_out) == -1) // OUVERTURE PIPE_OUT ====
-		return (response.error(INTERNAL, "pipe syscall failed"));
 	initCGIArgs(response, conf);
 	if (args.empty())
 		return ;
@@ -131,32 +128,5 @@ void CGI::launchCGI(Request & request, Response &response, Conf & conf)
 	{
 		if (wait(NULL) == -1)
 			return (response.error(INTERNAL, "wait syscall failed"));
-		if (close(fds_out[1]) == -1)
-			return (response.error(INTERNAL, "close syscall failed"));
-
-		//-- Recupere le retour du cgi comme reponse
-		char buf2[BUF_SIZE + 1];
-		ssize_t bytes_read;
-		while ((bytes_read = read(fds_out[0], buf2, BUF_SIZE)) > 0)
-		{
-			buf2[bytes_read] = '\0';
-			response.body += buf2;
-		}
-		if (bytes_read == -1)
-			return (response.error(INTERNAL, "read syscall failed"));
-		if (close(fds_out[0]) == -1)
-			return (response.error(INTERNAL, "close syscall failed"));
 	}
-
-	//-- Formate reponse cgi
-	response.contentType = response.body.substr(response.body.find("Content-type: ") + 14, std::string::npos); //ligne contenttype
-	response.contentType = response.contentType.substr(0, response.contentType.find("\r\n"));// valeur contenttype
-
-	std::stringstream ss(response.body);
-	std::string line;
-	while (std::getline(ss, line) && line != "\r")
-		;
-	response.body = "";
-	while (std::getline(ss, line))
-		response.body += line + "\r\n";
 }

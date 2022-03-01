@@ -7,5 +7,6 @@
 			echo "<script>window.location.href = '/success.html';</script>";
 		}
 	}
-	echo "<script>window.location.href = '/failed.html';</script>";
+	//echo "<script>window.location.href = '/failed.html';</script>";
+	header('Location: /');
 ?>

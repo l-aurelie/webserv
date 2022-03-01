@@ -10,7 +10,7 @@
 #include <sstream>
 #include <unistd.h>
 
-Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), port(80) {}
+Request::Request() : headerSize(0), headerFilled(false), countContentLength(0), countClientMaxBodySize(0), contentLength(0), bufLength(0), port(80) {}
 Request::Request(Request const& rhs) { *this = rhs; }
 Request::~Request() {}
 
@@ -34,6 +34,7 @@ Request& Request::operator=(Request const& rhs)
 	this->contentType = rhs.contentType;
 	this->chunked = rhs.chunked;
 	this->port = rhs.port;
+	this->bufLength = rhs.bufLength;
 	return (*this);
 }
 

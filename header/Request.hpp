@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include "webserv.hpp"
 
 class Request
 {
@@ -43,6 +44,8 @@ class Request
 		int countContentLength;
 		int countClientMaxBodySize;
 		std::size_t contentLength;
+		char buf[BUF_SIZE + 1];
+		int bufLength;
 
 	private:
 		std::string method;

@@ -23,7 +23,11 @@
 #include <unistd.h>
 #include <vector>
 
-Response::Response() {}
+Response::Response() : contentLength(0), sendLength(0)
+{
+	this->sendBuf = std::string(4096, '\0');
+}
+
 Response::Response(Response const &rhs) { *this = rhs; }
 Response::~Response() {}
 
@@ -41,11 +45,23 @@ Response &Response::operator=(Response const &rhs)
 	this->location = rhs.location;
 	this->date = rhs.date;
 	this->lastModified = rhs.lastModified;
-	this->body = rhs.body;
+//	this->body = rhs.body;
+	this->tmpFilename = rhs.tmpFilename;
+	this->sendBuf = rhs.sendBuf;
+	this->sendLength = rhs.sendLength;
 	return (*this);
 }
 
 //================================================================================//
+
+void Response::createTMPFile()
+{
+	tmpFilename = "/tmp/webserv_XXXXXX";
+	int fd = mkstemp(&(*tmpFilename.begin()));
+	if (fd != -1)
+		close(fd);
+	this->tmpFile.open(tmpFilename.c_str(), std::fstream::out | std::fstream::in | std::fstream::binary | std::fstream::trunc);
+}
 
 /*  SI NECESSAIRE RECHERCHE LE BON INDEX, REMPLI L'ATTRIBUT PATH ET VERIFIE LES ERREURS(existe, permission), PATH SET A EMPTY SI ERREURS */
 void Response::constructPath(Request &request, Conf const &conf)
@@ -77,7 +93,7 @@ void Response::constructPath(Request &request, Conf const &conf)
 	if(!path.empty() && path[path.length() - 1] == '/' && conf.autoindex)
 	{
 		autoIndex(path, conf.root);
-		path = "";
+//		path = "";
 		return ;
 	}
 	//-- Gere les erreurs de stats du fichier demande
@@ -109,7 +125,7 @@ void Response::constructPath(Request &request, Conf const &conf)
 
 /* PREPARE LA REPONSE POUR LES CAS D'ERREUR (REMPLI LE BODY AVEC LA PAGE D'ERREUR CORRESPONDANTE au status code, rempli le header)
 LA RENVOIE FORMATEE EN STRING */
-std::string Response::errorFillResponse(std::string code, Conf & conf)
+void Response::fillErrorBody(std::string code, Conf & conf)
 {
 	//-- Recupere code erreur et le verifie
 	std::stringstream ss;
@@ -129,23 +145,19 @@ std::string Response::errorFillResponse(std::string code, Conf & conf)
 		ss.str("");
 		ss.clear();
 	}
-
-	//-- Rempli header et body
-	std::ifstream f(path.c_str());
-	ss << f.rdbuf();
-	body = ss.str();
 	statusCode = code;
-	fillHeader();
-	return (format());
 }
 
 void Response::autoIndex(std::string const& path, std::string const& root)
 {
-	std::stringstream bdy;
-	bdy << "<html>\n<head><title>Index of ";
-	bdy << path << "</title></head>\n";
-	bdy << "<body>\n<h1>Index of " << path << "</h1><hr><pre>";
-	bdy << "<a href=\"../\">../</a>\n";
+	createTMPFile();
+	this->tmpFile << "<html>\n<head><title>Index of ";
+	this->tmpFile << path.c_str();
+	this->tmpFile << "</title></head>\n";
+	this->tmpFile << "<body>\n<h1>Index of ";
+	this->tmpFile << path.c_str();
+	this->tmpFile << "</h1><hr><pre>";
+	this->tmpFile << "<a href=\"../\">../</a>\n";
 	struct dirent *dir;
 	DIR *d = opendir((root + path).c_str());
 	if (d)
@@ -154,13 +166,19 @@ void Response::autoIndex(std::string const& path, std::string const& root)
 		{
 			if (std::string(dir->d_name) == "." || std::string(dir->d_name) == "..")
 				continue ;
-			bdy << "<a href=\"" << dir->d_name << "\">" << dir->d_name << "</a>\n";
+			this->tmpFile << "<a href=\"";
+			this->tmpFile << dir->d_name;
+			this->tmpFile << "\">";
+			this->tmpFile << dir->d_name;
+			this->tmpFile << "</a>\n";
 		}
 		closedir(d);
 	}
-	bdy << "</pre><hr></body>\n</html>";
+	this->tmpFile << "</pre><hr></body>\n</html>";
 	contentType = "text/html";
-	body = bdy.str();
+//	this->tmpFile << bdy;
+	this->path = this->tmpFilename;
+	// TODO: DOES NOT WORK !!!!!!!
 }
 
 /* EFFECTUE REDIRECTION : SET LOCATION DANS LE HEADER ET STATUS CODE */
@@ -181,32 +199,65 @@ void Response::redirected(int code, std::string const& url)
 	else if (code == 307)
 		statusCode = TEMPORARY_REDIRECT;
 	this->location = url;
+	this->path = "";
+	this->contentLength = 0;
 }
 
-/* REMPLI LA REPONSE ET LA RENVOIE FORMATEE EN STRING */
-std::string Response::prepareResponse(Request &request, std::vector<Conf> &confs)
+/* */
+void Response::prepareResponse(Request &request, std::vector<Conf> &confs)
 {
-	/* Selectionne la conf pour la reponse */
+	//-- Le header est deja envoye, on envoie le body bufferisé
+	if (bodyStream.is_open())
+	{
+		this->bodyStream.read(&this->sendBuf[0], BUF_SIZE);
+		this->sendLength = this->bodyStream.gcount();
+		return ;
+	}
 	Conf & conf = Utils::selectConf(confs, request.getServerName(), request.getPath());
-	/* Gere les erreurs presentes en amont */
+	//-- Gere les erreurs presentes en amont
 	if (!request.statusCode.empty())
-		return (errorFillResponse(request.statusCode, conf));
-	/* Gere method not allowed */
-	if (std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
-		return (errorFillResponse(METHOD_NOT_ALLOWED, conf));
-	/* Gere les redirection */
-	if (conf.redirectCode)
+		fillErrorBody(request.statusCode, conf);
+	//-- Gere method not allowed
+	else if (std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
+		fillErrorBody(METHOD_NOT_ALLOWED, conf);
+	//-- Gere les redirections
+	else if (conf.redirectCode)
 		redirected(conf.redirectCode, conf.redirectURL);
-	/* Ou rempli le body */
+	//-- Ou rempli le body
 	else
 	{
-		fillBody(request, conf);
-		if (statusCode != "200 OK")
-			return (errorFillResponse(statusCode, conf));
+		statusCode = "200 OK";
+		if (request.getMethod() == "POST" && path.rfind(".") != std::string::npos && conf.cgi.count(path.substr(path.rfind("."))) == 0)	// POST && pas .py ni .php
+			fillErrorBody(METHOD_NOT_ALLOWED, conf);
+		else if (request.getMethod() == "GET" || request.getMethod() == "POST")
+		{
+			constructPath(request, conf);
+			if (statusCode != "200 OK")
+				fillErrorBody(statusCode, conf);
+		}
+		else if (request.getMethod() == "DELETE")
+		{
+			methodDelete(request, conf);
+			this->path = "";
+			if (statusCode != "200 OK")
+				fillErrorBody(statusCode, conf);
+		}
+		if (path.rfind(".") != std::string::npos && conf.cgi.count(path.substr(path.rfind("."))) > 0)	//-- extension .php ou .py
+		{
+			createTMPFile();
+			CGI cgi;
+			cgi.launchCGI(request, *this, conf);
+			this->path = this->tmpFilename;
+		}
 	}
-	/* Rempli le header */
-	fillHeader();
-	return (format());
+	int header_len = fillHeader();
+	if (path.empty())
+		return ;
+	this->bodyStream.open(this->path);
+	this->sendLength = header_len;
+	this->bodyStream.read(&this->sendBuf[header_len], BUF_SIZE - header_len);
+	this->sendLength += this->bodyStream.gcount();
+	
 }
 
 /* SET ATTRIBUT CONTENT TYPE EN FONCTION EXTENSION DU PATH */
@@ -238,9 +289,87 @@ void Response::setContentType()
 	contentType = type;
 }
 
-/* REMPLI LE HEADER */
-void Response::fillHeader()
+int Response::emptyHeadersInFile()
 {
+	std::vector<std::string> fields;
+	fields.push_back("host");
+	fields.push_back("transfer-encoding");
+	fields.push_back("accept");
+	fields.push_back("accept-encoding");
+	fields.push_back("accept-language");
+	fields.push_back("cache-control");
+	fields.push_back("connection");
+	fields.push_back("expect");
+	fields.push_back("if-modified-since");
+	fields.push_back("origin");
+	fields.push_back("postman-token");
+	fields.push_back("pragma");
+	fields.push_back("referer");
+	fields.push_back("sec-fetch-dest");
+	fields.push_back("sec-fetch-mode");
+	fields.push_back("sec-fetch-site");
+	fields.push_back("sec-fetch-user");
+	fields.push_back("upgrade-insecure-requests");
+	fields.push_back("user-agent");
+	fields.push_back("x-powered-by");
+	fields.push_back("status");
+	// Response specific fields
+	fields.push_back("location");
+	fields.push_back("date");
+	fields.push_back("last-modified");
+	fields.push_back("server");
+	fields.push_back("content-length");
+	fields.push_back("content-type");
+
+	std::string line;
+	int header_size = 0;
+	while (std::getline(this->tmpFile, line) && line != "\r")
+	{
+		std::vector<std::string>::iterator it;
+		for (it = fields.begin(); it != fields.end(); ++it)
+		{
+			if (Utils::tolowerstr(line).find(*it) == 0)
+			{
+				if (*it == "location")
+					location = "";
+				else if (*it == "date")
+					date = "";
+				else if (*it == "last-modified")
+					lastModified = "";
+				else if (*it == "content-type")
+					contentType = "";
+				else if (*it == "content-length")
+					contentLength = -1;
+				header_size += line.length();
+				break ;
+			}
+		}
+		if (it == fields.end())
+		{
+			return (0);
+		}
+	}
+	if (line == "\r")
+		return (header_size);
+	return (0);
+}
+
+void Response::setContentLength(int headerSize)
+{
+	if (this->contentLength == -1 || this->path.empty())
+	{
+		this->contentLength = 0;
+		return ;
+	}
+	struct stat infos;
+	stat(this->path.c_str(), &infos);
+	this->contentLength = infos.st_size - headerSize;
+}
+
+/* REMPLI LE HEADER */
+int Response::fillHeader()
+{
+	//-- Rempli les variables qui correspondent aux headers
 	protocolVersion = "HTTP/1.1";
 	server = "webserv";
 
@@ -249,94 +378,53 @@ void Response::fillHeader()
 	this->date = Utils::setTime(&rawtime);
 
 	setContentType();
-	contentLength = body.length();
+
+	//-- Vide les headers deja presents dans le fichier
+	int header_size = emptyHeadersInFile();
+	setContentLength(header_size);
+
+	//-- Rempli le debut du fichier avec les variables des headers
+
+	std::string buf;
+	buf += protocolVersion + ' ' + statusCode + "\r\n";
+	if (!this->server.empty())
+		buf += "Server: " + this->server + "\r\n";
+	if (this->contentLength)
+	{
+		std::stringstream ss;
+		ss << this->contentLength;
+		buf += "Content-Length: " + ss.str() + "\r\n";
+	}
+	if (!this->contentType.empty())
+		buf += "Content-Type: " + this->contentType + "\r\n";
+	if (!this->location.empty())
+		buf += "Location: " + this->location + "\r\n";
+	if (!this->date.empty())
+		buf += "Date: " + this->date + "\r\n";
+	if (!this->lastModified.empty())
+		buf += "Last-Modified: " + this->lastModified + "\r\n";
+	if (!header_size)
+		buf += "\r\n";
+	this->sendBuf.replace(0, buf.length(), buf);
+	return (buf.length());
 }
 
-/* METHODE DELETE  SI LES DROITS LE PERMETTENT SUPPRIME LE FICHIER. SET LE STATUSCODE */
+/* METHODE DELETE SI LES DROITS LE PERMETTENT SUPPRIME LE FICHIER. SET LE STATUSCODE */
 void Response::methodDelete(Request &request, Conf const &conf)
 {
 	struct stat infos;
 	//-- Recupere et verifie le path
 	std::string path = conf.root + "/" + request.getPath();
-	std::cout << path << std::endl;
 	if (stat(path.c_str(), &infos) == -1)
-	{
 		statusCode = NOT_FOUND;
-		return;
-	}
 	else if (!(infos.st_mode & S_IWUSR))
-	{
 		statusCode = FORBIDDEN;
-		return;
-	}
 	//-- Supprime le fichier
-	remove(path.c_str());
-	statusCode = NO_CONTENT;
-}
-
-/* REMPLI LE BODY SELON LA METHODE GET */
-void Response::methodGet(Request &request, Conf &conf)
-{
-	//-- Recupere le path
-	constructPath(request, conf);
-	if (path.empty())
-		return;
-
-	//-- Le fichier demande est un CGI
-	if (path.rfind(".") != std::string::npos && conf.cgi.count(path.substr(path.rfind("."))) > 0)
-	{
-		CGI cgi;
-		cgi.launchCGI(request, *this, conf);
-	}
-	//-- Le fichier n'est pas un CGI
 	else
 	{
-		//-- Ouvre le fichier et rempli le body
-		std::ifstream ifs(path.c_str());
-		std::stringstream buf;
-		buf << ifs.rdbuf();
-		body = buf.str();
+		remove(path.c_str());
+		statusCode = NO_CONTENT;
 	}
-}
-
-/* REMPLI L'ATTRIBUT BODY EN FONCTION DU PATH DEMANDE ET DE LA METHODE DEMANDEE */
-void Response::fillBody(Request &request, Conf & conf)
-{
-	statusCode = "200 OK";
-	if (request.getMethod() == "GET")
-	{
-		methodGet(request, conf);
-	}
-	else if (request.getMethod() == "DELETE")
-	{
-		methodDelete(request, conf);
-	}
-	else if (request.getMethod() == "POST")
-	{
-		constructPath(request, conf);
-		CGI cgi;
-		cgi.launchCGI(request, *this, conf);
-	}
-}
-
-/* FORMATE L'OBJET REPONSE POUR CREER UNE STRING DE REPONSE AU CLIENT */
-std::string Response::format() const
-{
-	std::stringstream ss;
-
-	ss << this->protocolVersion << ' ' << this->statusCode << '\n';
-	ss << "Server: " << this->server << '\n';
-	if (this->contentLength)
-		ss << "Content-Length: " << this->contentLength << '\n';
-	ss << "Content-Type: " << this->contentType << '\n';
-	if (!this->location.empty())
-		ss << "Location: " << this->location << '\n';
-	ss << "Date: " << this->date << '\n';
-	if (!this->lastModified.empty())
-		ss << "Last-Modified: " << this->lastModified << '\n';
-	ss << '\n';
-	ss << this->body;
-	return ss.str();
 }
 
 void Response::error(std::string const& status_code, std::string const& error)

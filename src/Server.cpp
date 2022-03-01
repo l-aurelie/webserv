@@ -94,58 +94,77 @@ void Server::acceptClient(void)
 		return ;
 	}
 	msg_from_client[pfd.fd].createTMPFile();
-	pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
-	//pfd.events = POLLIN | POLLOUT | POLLERR;
+	//pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
+	pfd.events = POLLIN | POLLOUT | POLLERR;
 	fds.push_back(pfd);
 }
 
 /* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN : SON MESSAGE N'EST PAS TERMINE:
  ON CONTINUE DE RECV ET DE CONCATENER. Header placé dans headerBuf, body dans tmpFile */
-void Server::listenRequest(std::vector<struct pollfd>::iterator it)
+void Server::listenRequest(std::vector<struct pollfd>::iterator & it)
 {
 	int client_id = it->fd;
-	if (msg_from_client[client_id].tmpFile.fail())
-	{
-		std::cerr << "failed to open tmpfile '" << msg_from_client[client_id].tmpFilename << "'" << std::endl;
-		endConnection(it);
-		return ;
-	}
 	//-- On  lit dans buf ce que le client nous envoie, la taille lue dans read
-	char buf[BUF_SIZE + 1];
-	int bytes_read = recv(client_id, buf, BUF_SIZE, 0);
-	if (bytes_read <= 0)
+	msg_from_client[client_id].bufLength = recv(client_id, msg_from_client[client_id].buf, BUF_SIZE, 0);
+	if (msg_from_client[client_id].bufLength <= 0)
 	{
 		std::cerr << "recv error" << std::endl;
 		endConnection(it);
 		return ;
 	}
-	buf[bytes_read] = '\0';
+	msg_from_client[client_id].buf[msg_from_client[client_id].bufLength] = '\0';
+}
+
+void Server::treatRequest(std::vector<struct pollfd>::iterator & it)
+{
+	if (msg_from_client[it->fd].tmpFile.fail())
+	{
+		std::cerr << "failed to open tmpfile '" << msg_from_client[it->fd].tmpFilename << "'" << std::endl;
+		endConnection(it);
+		return ;
+	}
 	//-- Rempli header et body de l'objet request
-	ServerUtils::parseRecv(bytes_read, buf, msg_from_client[client_id], this->confs);
+	ServerUtils::parseRecv(msg_from_client[it->fd].bufLength, msg_from_client[it->fd].buf, msg_from_client[it->fd], this->confs);
+	msg_from_client[it->fd].bufLength = 0;
 }
 
 /* ON PREPARE  ET ENVOIE LA REPONSE  AU CLIENT (on sait que le client attend une reponse :
  poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */
-void Server::answerRequest(std::vector<struct pollfd>::iterator it)
+bool Server::answerRequest(std::vector<struct pollfd>::iterator & it)
 {
+//	std::cerr << "answer request()\t";
 	int client_id = it->fd;
-	Response response;
-	msg_to_client[client_id] = response.prepareResponse(msg_from_client[client_id], this->confs);
-	if (send(client_id, msg_to_client[client_id].c_str(), msg_to_client[client_id].length(), 0) <= 0)
+	if (msg_to_client[client_id].sendLength == 0)
 	{
-		std::cerr << "send error \n";
-		endConnection(it);
+		//std::cerr << "prepare response" << std::endl;
+		msg_to_client[client_id].prepareResponse(msg_from_client[client_id], this->confs);
 	}
+	else
+	{
+		//std::cerr << "sending for client_id: " << client_id << std::endl;
+		if (send(client_id, msg_to_client[client_id].sendBuf.c_str(), msg_to_client[client_id].sendLength, 0) <= 0)	// TODO: check length with '\0'	// TODO: find LENGTH to send
+		{
+			std::cerr << "send error" << std::endl;
+			endConnection(it);
+		}
+		msg_to_client[client_id].sendBuf = std::string(4096, '\0');
+		msg_to_client[client_id].sendLength = 0;
+		if (msg_to_client[client_id].bodyStream.eof())
+			return (true);
+	}
+	return (false);
 }
 
 /* GERE DECONNECTION, CLOSE FD, SUPPRIME REQUETE ET REPONSE CORRESPONDANTE */
-void Server::endConnection(std::vector<struct pollfd>::iterator it)
+void Server::endConnection(std::vector<struct pollfd>::iterator & it)
 {
+	//std::cerr << "closing client " << it->fd << std::endl;
 	close(it->fd);
-	msg_to_client.erase(it->fd);
 	remove(msg_from_client[it->fd].tmpFilename.c_str());
+	remove(msg_to_client[it->fd].tmpFilename.c_str());
+	msg_to_client.erase(it->fd);
 	msg_from_client.erase(it->fd);
-	fds.erase(it);
+	it = fds.erase(it);
 }
 
 /* 1 SERVER ECOUTE LES DEMANDES DE CONNECTION, LES REQUETES ET ENVOIE LES REPONSES AUX PRECEDENTES REQUETES */
@@ -159,27 +178,31 @@ void Server::launch(void)
 			this->acceptClient();
 			return;
 		}
-		for (std::vector<struct pollfd>::iterator it = fds.begin() + 1; it != fds.end(); it++)
+		std::vector<struct pollfd>::iterator it = fds.begin() + 1;
+		while (it != fds.end())
 		{
-	//		if (buf contient un truc)
-		//		ecrit dans fichier
+			if (msg_from_client[it->fd].bufLength)
+				treatRequest(it);
 			//-- un client nous envoie un message
-			if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
+			else if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
 				listenRequest(it);
 			//-- un client est pret a recevoir un message
 			else if (it->revents == POLLOUT && msg_from_client.count(it->fd))
 			{
-				answerRequest(it);
-				endConnection(it);
-				break ;
+				if (answerRequest(it))
+				{
+					endConnection(it);
+					continue ;
+				}
 			}
 			//-- le client se deconnecte
-			//else if (it->revents & POLLERR)
-			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // TODO: do not work on mac
+			else if (it->revents & POLLERR)
+			//else if (it->revents & POLLERR || it->revents & POLLRDHUP) // TODO: do not work on mac
 			{
 				endConnection(it);
-				break ;
+				continue ;
 			}
+			++it;
 		}
 	}
 }
