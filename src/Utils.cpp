@@ -1,4 +1,5 @@
 #include "Conf.hpp"
+#include "webserv.hpp"
 
 #include <iostream>
 #include <map>
@@ -45,6 +46,22 @@ std::string tolowerstr(std::string const& str)
 	for (size_t i = 0; i < str.length(); i++)
 		ans.append(1, tolower(str[i]));
 	return ans;
+}
+
+bool isStatusError(std::string const& status_code)
+{
+	std::vector< std::string >errorCodes;
+	errorCodes.push_back(BAD_REQUEST);
+	errorCodes.push_back(FORBIDDEN);
+	errorCodes.push_back(NOT_FOUND);
+	errorCodes.push_back(METHOD_NOT_ALLOWED);
+	errorCodes.push_back(TOO_LARGE);
+	errorCodes.push_back(INTERNAL);
+
+	for (std::vector< std::string >::iterator it = errorCodes.begin(); it != errorCodes.end(); ++it)
+		if (status_code == *it)
+			return (true);
+	return (false);
 }
 
 } // namespace Utils

@@ -113,6 +113,11 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator & it)
 		return ;
 	}
 	msg_from_client[client_id].buf[msg_from_client[client_id].bufLength] = '\0';
+	/*
+	int fd = open("/tmp/webserv/in", O_WRONLY | O_CREAT);
+	write(fd, msg_from_client[client_id].buf, msg_from_client[client_id].bufLength);
+	close(fd);
+	*/
 }
 
 /* TRAITE LE MESSAGE RECU DANS BUF DANS UN OBJET REQUEST, Header placé dans headerBuf, body dans tmpFile */
@@ -140,7 +145,6 @@ bool Server::answerRequest(std::vector<struct pollfd>::iterator & it)
 	}
 	else
 	{
-		//std::cerr << "sending for client_id: " << client_id << std::endl;
 		if (send(client_id, msg_to_client[client_id].sendBuf.c_str(), msg_to_client[client_id].sendLength, 0) <= 0)
 		{
 			std::cerr << "send error" << std::endl;
@@ -148,7 +152,7 @@ bool Server::answerRequest(std::vector<struct pollfd>::iterator & it)
 		}
 		msg_to_client[client_id].sendBuf = std::string(4096, '\0');
 		msg_to_client[client_id].sendLength = 0;
-		if (msg_to_client[client_id].bodyStream.eof())
+		if (msg_to_client[client_id].bodyStream.eof() || msg_to_client[client_id].getPath().empty())
 			return (true);
 	}
 	return (false);

@@ -1,0 +1,3 @@
+DELETE /upload/bigfile.txt HTTP/1.1
+Host: localhost:6500
+

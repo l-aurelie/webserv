@@ -42,44 +42,58 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 		{
 			std::stringstream ss;
 			std::string hex(body_buf + pos);
+			std::cerr << "line to convert: |" << hex << "|" << std::endl;
 			hex = hex.substr(0, hex.find("\r\n"));
-			pos += hex.length(); //avance pos apres le hexa\r\n
-			ss << std::hex << hex;
-			ss >> req.countContentLength;
-			if (ss.fail())
+			std::cerr << "hex to convert: |" << hex << "|" << std::endl;
+			if (hex.empty())
 			{
-				std::cerr << "error : unchunk request: cannot convert content length from hexa" << std::endl;
-				req.statusCode = BAD_REQUEST;
-				return ;
+				std::cerr << "its eplty\n";
+				pos += 2;
+				//req.countContentLength = -2;
+				continue;
 			}
+			else
+			{
+				pos += hex.length(); // avance pos apres le hexa et avant le \r\n
+				ss << std::hex << hex;
+				ss >> req.countContentLength;
+				if (ss.fail())
+				{
+					std::cerr << "error : unchunk request: cannot convert content length from hexa" << std::endl;
+					req.statusCode = BAD_REQUEST;
+					return;
+				}
+			}
+
 			//-- Ajoute la taille du chunk au content length
-			req.contentLength += req.countContentLength;
-			
-			if (req.countContentLength == 0)// Fin de request
+			if (req.countContentLength > 0)
+				req.contentLength += req.countContentLength;
+
+			if (req.countContentLength == 0) // Fin de request
 				req.countContentLength = -1;
 		}
-		
-		//-- Saute \r\n  
-		if (static_cast<int>(pos) < read && req.countContentLength)//Apres hexa
+
+		//-- Saute \r\n
+		if (static_cast<int>(pos) < read && req.countContentLength) // Apres hexa
 		{
 			if (std::string(body_buf + pos).find("\r") == 0)
 				pos += 1;
 			if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
 				pos += 1;
 		}
-		if (static_cast<int>(pos) < read && req.countContentLength == -1)//a la fi n de la requete
+		if (static_cast<int>(pos) < read && req.countContentLength == -1) // a la fi n de la requete
 		{
 			if (std::string(body_buf + pos).find("\r") == 0)
 				pos += 1;
 			if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
-				break ;
+				break;
 		}
 		if (req.countClientMaxBodySize > 0 && req.countContentLength >= req.countClientMaxBodySize) // si somme de countContentLength a atteint ClientMaxBodySize
 		{
 			req.statusCode = TOO_LARGE;
-			break ;
+			break;
 		}
-		else if (req.countContentLength > 0 && req.countContentLength < read - static_cast<int>(pos))//read trop grand on ecrit juste content length on a fini ce chunk content length = 0
+		else if (req.countContentLength > 0 && req.countContentLength < read - static_cast<int>(pos)) // read trop grand on ecrit juste content length on a fini ce chunk content length = 0
 		{
 			req.tmpFile.write(body_buf + pos, req.countContentLength);
 			req.tmpFile.flush();
@@ -103,7 +117,7 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 }
 
 /* REMPLI LE HEADER ET LE BODY DE L'OBJET REQUEST, PREND EN COMPTE MAXBODYSIZE ET CONTENTLENGTH */
-void parseRecv(int bytes_read, char * buf, Request & req, std::vector< Conf > & confs) 
+void parseRecv(int bytes_read, char *buf, Request &req, std::vector<Conf> &confs)
 {
 	//-- Cherche la fin du header
 	std::string tmp = buf;
@@ -128,15 +142,15 @@ void parseRecv(int bytes_read, char * buf, Request & req, std::vector< Conf > & 
 			req.headerBuf += tmp.substr(0, pos);
 			//- Le header est complet, on parse le requete
 			req = Parser::parseRequest(req);
-			req.countClientMaxBodySize = Utils::selectConf(confs, req.getServerName(), req.getPath()).clientMaxBodySize;//trouver max_body_size
-			pos += 2; //- sauter la ligne vide separatrice entre les header et le body
-			bytes_read -= pos; //- bytes_read: le nb de characters du body dans le buf
+			req.countClientMaxBodySize = Utils::selectConf(confs, req.getServerName(), req.getPath()).clientMaxBodySize; // trouver max_body_size
+			pos += 2;																									 //- sauter la ligne vide separatrice entre les header et le body
+			bytes_read -= pos;																							 //- bytes_read: le nb de characters du body dans le buf
 		}
 		else //- debut de nouveau msg Chunked
 			pos = 0;
-		char * body_buf = &(buf[pos]); //debut du body jusqu a fin de buf
-		pos = 0; // debut du body_buf
-		if (!req.getChunked()) //- Non chunked et fin header : ecrit la partie body dans fichier
+		char *body_buf = &(buf[pos]); // debut du body jusqu a fin de buf
+		pos = 0;					  // debut du body_buf
+		if (!req.getChunked())		  //- Non chunked et fin header : ecrit la partie body dans fichier
 		{
 			req.countContentLength = req.getContentLength();
 			ServerUtils::writeBodyInTMPFile(req, body_buf, bytes_read);
@@ -145,5 +159,4 @@ void parseRecv(int bytes_read, char * buf, Request & req, std::vector< Conf > & 
 			ServerUtils::unchunk(body_buf, bytes_read, pos, req);
 	}
 }
-
 }

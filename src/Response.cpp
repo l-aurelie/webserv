@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <vector>
 
-Response::Response() : sendLength(0), contentLength(0) { this->sendBuf = std::string(4096, '\0'); }
+Response::Response() : sendLength(0), contentLength(-1) { this->sendBuf = std::string(4096, '\0'); }
 Response::Response(Response const &rhs) { *this = rhs; }
 Response::~Response() {}
 
@@ -64,6 +64,7 @@ void Response::methodDelete(Request &request, Conf const &conf)
 	{
 		remove(path.c_str());
 		statusCode = NO_CONTENT;
+		this->contentLength = -1;
 	}
 }
 
@@ -77,7 +78,7 @@ void Response::autoIndex(std::string const& path, std::string const& root)
 	this->tmpFile << "<h1>Index of " << path.c_str() << "</h1>";
 	this->tmpFile << "<hr>";
 	this->tmpFile << "<pre>";
-	this->tmpFile << "<a href=\"../\">../</a>";
+	this->tmpFile << "<a href=\"../\">../</a><br>";
 	struct dirent *dir;
 	DIR *d = opendir((root + path).c_str());
 	if (d)
@@ -118,7 +119,7 @@ void Response::redirected(int code, std::string const& url)
 		statusCode = TEMPORARY_REDIRECT;
 	this->location = url;
 	this->path = "";
-	this->contentLength = 0;
+	this->contentLength = -1;
 }
 
 void Response::createTMPFile()
@@ -245,9 +246,7 @@ int Response::emptyHeadersInFile()
 			}
 		}
 		if (it == fields.end())
-		{
 			return (0);
-		}
 	}
 	if (line == "\r")
 		return (header_size);
@@ -294,11 +293,10 @@ void Response::setContentType()
 
 void Response::setContentLength(int headerSize)
 {
-	if (this->contentLength == -1 || this->path.empty())
-	{
-		this->contentLength = 0;
+	//std::cerr << "---------------" << std::endl;
+	//std::cerr << "path is " << path << std::endl;
+	if (this->path.empty())
 		return ;
-	}
 	struct stat infos;
 	stat(this->path.c_str(), &infos);
 	this->contentLength = infos.st_size - headerSize;
@@ -306,8 +304,10 @@ void Response::setContentLength(int headerSize)
 
 void Response::firstFillSendBuf(int header_len)
 {
-	this->bodyStream.open(this->path);
 	this->sendLength = header_len;
+	if (path.empty())
+			return ;
+	this->bodyStream.open(this->path.c_str());
 	this->bodyStream.read(&this->sendBuf[header_len], BUF_SIZE - header_len);
 	this->sendLength += this->bodyStream.gcount();
 }
@@ -327,6 +327,8 @@ void Response::prepareResponse(Request &request, std::vector<Conf> &confs)
 	if (!request.statusCode.empty())
 		fillErrorBody(request.statusCode, conf);
 	//-- Gere les redirections
+	else if (std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
+		fillErrorBody(METHOD_NOT_ALLOWED, conf);
 	else if (conf.redirectCode)
 		redirected(conf.redirectCode, conf.redirectURL);
 	//-- Prepare le path du fichier a transmettre
@@ -335,8 +337,6 @@ void Response::prepareResponse(Request &request, std::vector<Conf> &confs)
 	//-- Rempli le sendbuf avec le header
 	int header_len = fillHeader();
 	//-- Ouvre le bodystream, rempli la fin du premier sendbuf avec le debut du body
-	if (path.empty())
-		return ;
 	firstFillSendBuf(header_len);
 }
 
@@ -349,14 +349,14 @@ void Response::prepareBody(Request & request, Conf &conf)
 	else if (request.getMethod() == "GET" || request.getMethod() == "POST")
 	{
 		constructPath(request, conf);
-		if (statusCode != "200 OK")
+		if (Utils::isStatusError(statusCode))
 			fillErrorBody(statusCode, conf);
 	}
 	else if (request.getMethod() == "DELETE")
 	{
 		methodDelete(request, conf);
 		this->path = "";
-		if (statusCode != "200 OK")
+		if (Utils::isStatusError(statusCode))
 			fillErrorBody(statusCode, conf);
 	}
 	if (path.rfind(".") != std::string::npos && conf.cgi.count(path.substr(path.rfind("."))) > 0) //-- extension .php ou .py
@@ -389,7 +389,7 @@ int Response::fillHeader()
 	buf += protocolVersion + ' ' + statusCode + "\r\n";
 	if (!this->server.empty())
 		buf += "Server: " + this->server + "\r\n";
-	if (this->contentLength)
+	if (this->contentLength >= 0)
 	{
 		std::stringstream ss;
 		ss << this->contentLength;
@@ -422,7 +422,17 @@ void Response::fillErrorBody(std::string code, Conf & conf)
 
 	//-- Choisit page erreur de la conf ou la page d'erreur par defaut
 	if (conf.errorPages.count(error_code))
+	{
 		path = conf.root + "/" + conf.errorPages[error_code];
+		struct stat infos;
+		if (stat(path.c_str(), &infos) == -1)
+		{
+			ss << "./error_pages/" << error_code << ".html";
+			ss >> path;
+			ss.str("");
+			ss.clear();
+		}
+	}
 	else
 	{
 		ss << "./error_pages/" << error_code << ".html";

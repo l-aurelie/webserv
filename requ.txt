@@ -1,13 +1,17 @@
-POST /phpinfo.php HTTP/1.1
+POST /upload.php HTTP/1.1
 Host: localhost:6500
 Transfer-Encoding: chunked
 
-7
-bonjour
-F
-les gens et le 
-5
-monde
-0
 
+98
+----------------------------404060523688699916089976
+Content-Disposition: form-data; name="userfile"; filename="img.jpeg"
+Content-Type: image/jpeg
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+3a
+
+----------------------------404060523688699916089976--
+
+0
 

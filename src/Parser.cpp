@@ -98,6 +98,8 @@ void completeConfLocation(Conf & conf)
 			it->second.allowedMethods = conf.allowedMethods;
 		if (it->second.errorPages.empty())
 			it->second.errorPages = conf.errorPages;
+		if (it->second.cgi.empty())
+			it->second.cgi = conf.cgi;
 	}
 }
 
