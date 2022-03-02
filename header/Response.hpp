@@ -17,7 +17,14 @@ class Response {
 
 		std::fstream tmpFile;
 		std::string tmpFilename;
+		std::string sendBuf;
+		int sendLength;
+		std::ifstream bodyStream;
+		std::string contentType;
 
+		std::string const& getPath() const;
+		std::string const& getQueryString() const;
+		void error(std::string const & status_code, std::string const & error);
 		void prepareResponse(Request & request, std::vector<Conf> &confs);
 
 	private:
@@ -31,28 +38,16 @@ class Response {
 		std::string date;
 		std::string lastModified;
 
-		void createTMPFile();
-		void fillErrorBody(std::string code, Conf & conf);
-		int fillHeader();
-
-		int emptyHeadersInFile();
-		void constructPath(Request &request, Conf const& conf);
+		void methodDelete(Request &request, Conf const &conf);
+		void autoIndex(std::string const& path, std::string const& root);
 		void redirected(int code, std::string const& url);
+		void createTMPFile();
+		void constructPath(Request &request, Conf const& conf);
+		int emptyHeadersInFile();
 		void setContentType();
 		void setContentLength(int headerSize);
-		std::string matchingExtensionType(const std::string &extension);
-		void autoIndex(std::string const& path, std::string const& root);
-		void methodDelete(Request &request, Conf const &conf);
-
-	public:
-		std::string sendBuf;
-		int sendLength;
-	//	std::string body;
-		std::ifstream bodyStream;
-		std::string contentType;
-
-		std::string const& getPath() const;
-		std::string const& getQueryString() const;
-
-		void error(std::string const & status_code, std::string const & error);
+		void prepareBody(Request & request, Conf &conf);
+		void fillErrorBody(std::string code, Conf & conf);
+		int fillHeader();
+		void firstFillSendBuf(int header_len);
 };

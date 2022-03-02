@@ -5,8 +5,11 @@
 
 		if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
 			echo "<script>window.location.href = '/success.html';</script>";
+			//header('Location: success.html');
+			return ;
 		}
 	}
-	//echo "<script>window.location.href = '/failed.html';</script>";
-	header('Location: /');
+	echo "<script>window.location.href = '/failed.html';</script>";
+	//header('Location: failed.html');
+	return ;
 ?>

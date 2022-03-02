@@ -99,8 +99,8 @@ void Server::acceptClient(void)
 	fds.push_back(pfd);
 }
 
-/* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN : SON MESSAGE N'EST PAS TERMINE:
- ON CONTINUE DE RECV ET DE CONCATENER. Header placé dans headerBuf, body dans tmpFile */
+/* PREPARATION DE L'OBJET REQUEST: TANT QUE LE CLIENT EST EN POLLIN, SON MESSAGE N'EST PAS TERMINE:
+ ON CONTINUE DE RECV */
 void Server::listenRequest(std::vector<struct pollfd>::iterator & it)
 {
 	int client_id = it->fd;
@@ -115,6 +115,7 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator & it)
 	msg_from_client[client_id].buf[msg_from_client[client_id].bufLength] = '\0';
 }
 
+/* TRAITE LE MESSAGE RECU DANS BUF DANS UN OBJET REQUEST, Header placé dans headerBuf, body dans tmpFile */
 void Server::treatRequest(std::vector<struct pollfd>::iterator & it)
 {
 	if (msg_from_client[it->fd].tmpFile.fail())
@@ -132,17 +133,15 @@ void Server::treatRequest(std::vector<struct pollfd>::iterator & it)
  poll POLLOUT et il est present dans la map msg_from_client car a effectue une requete) */
 bool Server::answerRequest(std::vector<struct pollfd>::iterator & it)
 {
-//	std::cerr << "answer request()\t";
 	int client_id = it->fd;
 	if (msg_to_client[client_id].sendLength == 0)
 	{
-		//std::cerr << "prepare response" << std::endl;
 		msg_to_client[client_id].prepareResponse(msg_from_client[client_id], this->confs);
 	}
 	else
 	{
 		//std::cerr << "sending for client_id: " << client_id << std::endl;
-		if (send(client_id, msg_to_client[client_id].sendBuf.c_str(), msg_to_client[client_id].sendLength, 0) <= 0)	// TODO: check length with '\0'	// TODO: find LENGTH to send
+		if (send(client_id, msg_to_client[client_id].sendBuf.c_str(), msg_to_client[client_id].sendLength, 0) <= 0)
 		{
 			std::cerr << "send error" << std::endl;
 			endConnection(it);
@@ -181,12 +180,12 @@ void Server::launch(void)
 		std::vector<struct pollfd>::iterator it = fds.begin() + 1;
 		while (it != fds.end())
 		{
+			//-- Un client nous envoie un message
 			if (msg_from_client[it->fd].bufLength)
 				treatRequest(it);
-			//-- un client nous envoie un message
 			else if (it->revents == POLLIN || (it->revents == (POLLIN | POLLOUT)))
 				listenRequest(it);
-			//-- un client est pret a recevoir un message
+			//-- Un client est pret a recevoir un message
 			else if (it->revents == POLLOUT && msg_from_client.count(it->fd))
 			{
 				if (answerRequest(it))
