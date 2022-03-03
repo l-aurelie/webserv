@@ -41,7 +41,11 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 		if (req.countContentLength == 0)
 		{
 			std::string hex(body_buf + pos);
-			hex = hex.substr(0, hex.find("\r\n"));
+			//hex = hex.substr(0, hex.find("\r\n"));
+			hex = hex.substr(0, hex.find("\n"));
+			hex = hex.substr(0, hex.find("\r"));
+			//if (hex.empty())
+			//	break ;
 			pos += hex.length(); // avance pos apres le hexa et avant le \r\n
 			std::stringstream ss;
 			ss << std::hex << hex;
@@ -66,6 +70,14 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 				pos += 1;
 			if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
 				pos += 1;
+				/*
+			if (req.countContentLength != -1){
+			if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\r") == 0)
+				pos += 1;
+			if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
+				pos += 1;
+			}
+			*/
 		}
 		if (static_cast<int>(pos) < read && req.countContentLength == -1) // a la fin de la requete
 		{

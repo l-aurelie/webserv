@@ -14,7 +14,7 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 ## Roadmap
 
 - [x] Creer la structure du projet
-- [ ] server en c++
+- [x] server en c++
 	- [x] envoyer message
 	- [x] recevoir message
 	- [x] passer en mode non bloquant
@@ -25,8 +25,8 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] repondre aux messages des clients
 	- [x] utiliser les fichiers de conf
 	- [x] parse content-length
-	- [ ] deconnecter le client si read/recv return 0 OR -1
-- [ ] Parsing des fichiers de conf
+	- [x] deconnecter le client si read/recv return 0 OR -1
+- [x] Parsing des fichiers de conf
 	- [x] Prendre chemin en argument
 	- [x] Chemin par defaut
 	- [x] Recuperer le port
@@ -41,13 +41,13 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] possiblity de changer les pages d'error
 	- [x] autoindex on/off
 	- [x] allowed_method
-	- [ ] devrait pas fonctionner si plusieurs fois le meme port utilise
-	- [ ] Setup the server_names or not.
-- [ ] parsing des requetes clients
+	- [x] devrait pas fonctionner si plusieurs fois le meme port utilise
+	- [x] Setup the server_names or not.
+- [x] parsing des requetes clients
 	- [x] analyse messages requetes
 	- [x] create d'objet Request
 	- [x] tronquer le body a max_client_body_size
-- [ ] creation des reponses du serveur
+- [x] creation des reponses du serveur
 	- [x] header
 	- [x] body => aller chercher le fichier correspondant
 	- [x] envoyer au client
@@ -58,10 +58,10 @@ Tout en C++ 98. malloc, free, write, htons, htonl, ntohs, ntohl, select, poll, e
 	- [x] send image
 	- [x] utiliser autoindex
 	- [x] 301 request if file is folder to folder/
-	- [ ] upload fichier
+	- [x] upload fichier
 		- [x] handle client_max_body_size
 		- [x] handle content-length
-		- [ ] upload.php script
+		- [x] upload.php script
 	- [x] download fichier
 - [x] CGI
 	- [x] C'est quoi ?

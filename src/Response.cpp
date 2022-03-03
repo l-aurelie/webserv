@@ -135,37 +135,35 @@ void Response::createTMPFile()
 void Response::constructPath(Request &request, Conf const &conf)
 {
 	struct stat infos;
-
 	//-- Decoupe la queryString dans le path
 	queryString = request.getPath().substr(request.getPath().find("?") + 1);
 	path = request.getPath().substr(0, request.getPath().find("?"));
 	if (queryString == path)
 		queryString = "";
-	//-- Le path ne requiert pas de recherche d'index
-	if (path[path.length() - 1] != '/')
-		path = conf.root + "/" + path;
+	std::string path_original = path;
+	path = conf.root + "/" + path;
 	//-- Itere sur les indexes pour trouver le bon path
-	else
+	if (path[path.length() - 1] == '/')
 	{
 		for (std::vector<std::string>::const_iterator it = conf.index.begin(); it != conf.index.end(); it++)
 		{
-			if (stat((conf.root + "/" + path + *it).c_str(), &infos) != -1)
+			if (stat((path + *it).c_str(), &infos) != -1)
 			{
-				path = conf.root + "/" + path + *it;
+				path += *it;
 				break;
 			}
 		}
 	}
 	bzero(&infos, sizeof(infos));
 	//-- Gere AUTOINDEX
-	if(!path.empty() && path[path.length() - 1] == '/' && conf.autoindex)
+	if(path[path.length() - 1] == '/' && conf.autoindex)
 	{
-		autoIndex(path, conf.root);
+		autoIndex(path_original, conf.root);
 		return ;
 	}
 	//-- Gere les erreurs de stats du fichier demande
 	//- N'existe pas
-	else if (stat(path.c_str(), &infos) == -1 && !(infos.st_mode & S_IFDIR))
+	else if (stat(path.c_str(), &infos) == -1)
 	{
 		statusCode = NOT_FOUND;
 		path = "";
@@ -293,8 +291,6 @@ void Response::setContentType()
 
 void Response::setContentLength(int headerSize)
 {
-	//std::cerr << "---------------" << std::endl;
-	//std::cerr << "path is " << path << std::endl;
 	if (this->path.empty())
 		return ;
 	struct stat infos;

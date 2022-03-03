@@ -94,8 +94,8 @@ void Server::acceptClient(void)
 		return ;
 	}
 	msg_from_client[pfd.fd].createTMPFile();
-	//pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
-	pfd.events = POLLIN | POLLOUT | POLLERR;
+	pfd.events = POLLIN | POLLOUT | POLLRDHUP | POLLERR; // TODO: not on mac
+	//pfd.events = POLLIN | POLLOUT | POLLERR;
 	fds.push_back(pfd);
 }
 
@@ -194,8 +194,8 @@ void Server::launch(void)
 				}
 			}
 			//-- le client se deconnecte
-			else if (it->revents & POLLERR)
-			//else if (it->revents & POLLERR || it->revents & POLLRDHUP) // TODO: do not work on mac
+			//else if (it->revents & POLLERR)
+			else if (it->revents & POLLERR || it->revents & POLLRDHUP) // TODO: do not work on mac
 			{
 				endConnection(it);
 				continue ;
