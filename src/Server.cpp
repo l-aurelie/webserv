@@ -156,7 +156,6 @@ bool Server::answerRequest(std::vector<struct pollfd>::iterator & it)
 /* GERE DECONNECTION, CLOSE FD, SUPPRIME REQUETE ET REPONSE CORRESPONDANTE */
 void Server::endConnection(std::vector<struct pollfd>::iterator & it)
 {
-	//std::cerr << "closing client " << it->fd << std::endl;
 	close(it->fd);
 	remove(msg_from_client[it->fd].tmpFilename.c_str());
 	remove(msg_to_client[it->fd].tmpFilename.c_str());
