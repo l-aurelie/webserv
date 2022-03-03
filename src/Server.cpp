@@ -113,11 +113,6 @@ void Server::listenRequest(std::vector<struct pollfd>::iterator & it)
 		return ;
 	}
 	msg_from_client[client_id].buf[msg_from_client[client_id].bufLength] = '\0';
-	/*
-	int fd = open("/tmp/webserv/in", O_WRONLY | O_CREAT);
-	write(fd, msg_from_client[client_id].buf, msg_from_client[client_id].bufLength);
-	close(fd);
-	*/
 }
 
 /* TRAITE LE MESSAGE RECU DANS BUF DANS UN OBJET REQUEST, Header placé dans headerBuf, body dans tmpFile */

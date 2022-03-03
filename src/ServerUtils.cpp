@@ -40,34 +40,20 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 		//-- Parse le hexa content length
 		if (req.countContentLength == 0)
 		{
-			std::stringstream ss;
 			std::string hex(body_buf + pos);
-			std::cerr << "line to convert: |" << hex << "|" << std::endl;
 			hex = hex.substr(0, hex.find("\r\n"));
-			std::cerr << "hex to convert: |" << hex << "|" << std::endl;
-			if (hex.empty())
+			pos += hex.length(); // avance pos apres le hexa et avant le \r\n
+			std::stringstream ss;
+			ss << std::hex << hex;
+			ss >> req.countContentLength;
+			if (ss.fail())
 			{
-				std::cerr << "its eplty\n";
-				pos += 2;
-				//req.countContentLength = -2;
-				continue;
+				std::cerr << "error : unchunk request: cannot convert content length from hexa" << std::endl;
+				req.statusCode = BAD_REQUEST;
+				return;
 			}
-			else
-			{
-				pos += hex.length(); // avance pos apres le hexa et avant le \r\n
-				ss << std::hex << hex;
-				ss >> req.countContentLength;
-				if (ss.fail())
-				{
-					std::cerr << "error : unchunk request: cannot convert content length from hexa" << std::endl;
-					req.statusCode = BAD_REQUEST;
-					return;
-				}
-			}
-
 			//-- Ajoute la taille du chunk au content length
-			if (req.countContentLength > 0)
-				req.contentLength += req.countContentLength;
+			req.contentLength += req.countContentLength;
 
 			if (req.countContentLength == 0) // Fin de request
 				req.countContentLength = -1;
@@ -81,7 +67,7 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 			if (static_cast<int>(pos) < read && std::string(body_buf + pos).find("\n") == 0)
 				pos += 1;
 		}
-		if (static_cast<int>(pos) < read && req.countContentLength == -1) // a la fi n de la requete
+		if (static_cast<int>(pos) < read && req.countContentLength == -1) // a la fin de la requete
 		{
 			if (std::string(body_buf + pos).find("\r") == 0)
 				pos += 1;
@@ -98,8 +84,10 @@ static void unchunk(char *& body_buf, int & read, std::size_t & pos, Request & r
 			req.tmpFile.write(body_buf + pos, req.countContentLength);
 			req.tmpFile.flush();
 			pos += req.countContentLength;
-			if (static_cast<int>(pos) + 2 < read) // skip \r\n of end of text line
-				pos += 2;
+			if (static_cast<int>(pos) + 1 < read && std::string(body_buf + pos).find("\r") == 0) // skip \r of end of text line
+				pos += 1;
+			if (static_cast<int>(pos) + 1 < read && std::string(body_buf + pos).find("\n") == 0) // skip \n of end of text line
+				pos += 1;
 			if (req.countClientMaxBodySize > 0)
 				req.countClientMaxBodySize -= req.countContentLength; // ContentLength always > ClientMaxBodySize, because checked at the above if condition
 			req.countContentLength = 0;
