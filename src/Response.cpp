@@ -323,8 +323,10 @@ void Response::prepareResponse(Request &request, std::vector<Conf> &confs)
 	if (!request.statusCode.empty())
 		fillErrorBody(request.statusCode, conf);
 	//-- Gere les redirections
-	else if (std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
+	else if (!request.getMethod().empty() && std::find(conf.allowedMethods.begin(), conf.allowedMethods.end(), request.getMethod()) == conf.allowedMethods.end())
+	{
 		fillErrorBody(METHOD_NOT_ALLOWED, conf);
+	}
 	else if (conf.redirectCode)
 		redirected(conf.redirectCode, conf.redirectURL);
 	//-- Prepare le path du fichier a transmettre
@@ -341,7 +343,9 @@ void Response::prepareBody(Request & request, Conf &conf)
 {
 	statusCode = "200 OK";
 	if (request.getMethod() == "POST" && path.rfind(".") != std::string::npos && conf.cgi.count(path.substr(path.rfind("."))) == 0)	// POST && pas .py ni .php
+	{
 		fillErrorBody(METHOD_NOT_ALLOWED, conf);
+	}
 	else if (request.getMethod() == "GET" || request.getMethod() == "POST")
 	{
 		constructPath(request, conf);
